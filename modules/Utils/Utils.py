@@ -37,17 +37,17 @@ def Hex2Str(message):
 	return "".join([chr(int(message[i:i+2], 16)) for i in range(0, len(message), 2)])
 
 def base64Encode(message):
-	return base64.b64encode(message.encode()).decode()
+	return base64.b64encode(message.encode())
 
 def base64Decode(message):
-	return base64.b64decode(message.encode()).decode()
+	return base64.b64decode(message.encode())
 
 def base64UrlEncode(message):
-	return base64.urlsafe_b64encode(message.encode()).rstrip(b"=").decode()
+	return base64.urlsafe_b64encode(message.encode()).rstrip(b"=")
 
 def base64UrlDecode(message):
 	padding = b"=" * (4-(len(message)%4))
-	return base64.urlsafe_b64decode(message.encode()+padding).decode()
+	return base64.urlsafe_b64decode(message.encode()+padding)
 
 def UrlEncode(message):
 	return urllib.quote(message)

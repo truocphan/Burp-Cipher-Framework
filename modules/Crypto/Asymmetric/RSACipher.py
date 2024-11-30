@@ -8,9 +8,9 @@ import base64
 
 class RSACipher:
 	"""
-	- algorithm: raw // "RSA/ECB/PKCS1Padding", "RSA/ECB/OAEPPadding"
+	- algorithm: str // "RSA/ECB/PKCS1Padding", "RSA/ECB/OAEPPadding"
 	# SHA256withRSA
-	- provider: raw
+	- provider: str
 	"""
 	def __init__(self, algorithm, provider=None):
 		self.algorithm = algorithm
@@ -26,8 +26,8 @@ class RSACipher:
 
 
 	"""
-	- PlainText: base64 encode
-	- Return value: base64 encode
+	- PlainText: str
+	- Return value: str
 	"""
 	def encrypt(self, PlainText, PublicKey=None, PrivateKey=None):
 		if self.provider != None:
@@ -43,13 +43,13 @@ class RSACipher:
 			return None
 
 		instance.init(1, encryptKey)
-		CipherText = instance.doFinal(base64.b64decode(PlainText))
-		return base64.b64encode(CipherText)
+		CipherText = instance.doFinal(PlainText)
+		return CipherText.tostring()
 
 
 	"""
-	- CipherText: base64 encode
-	- Return value: base64 encode
+	- CipherText: str
+	- Return value: str
 	"""
 	def decrypt(self, CipherText, PrivateKey=None, PublicKey=None):
 		if self.provider != None:
@@ -65,29 +65,14 @@ class RSACipher:
 			return None
 
 		instance.init(2, decryptKey)
-		PlainText = instance.doFinal(base64.b64decode(CipherText))
-		return  base64.b64encode(PlainText)
+		PlainText = instance.doFinal(CipherText)
+		return  PlainText.tostring()
 
 
 	"""
-	- message: base64 encode
-	- signData: base64 encode
-	- Return value: boolean
-	"""
-	def verify(self, message, signData, PublicKey):
-		if self.provider != None:
-			sign = Signature.getInstance(self.algorithm, self.provider)
-		else:
-			sign = Signature.getInstance(self.algorithm)
-
-		sign.initVerify(self.RSAPublicKey(PublicKey))
-		sign.update(base64.b64decode(message))
-		return sign.verify(base64.b64decode(signData))
-
-
-	"""
-	- message: base64 encode
-	- Return value: base64 encode
+	- message: str
+	- PrivateKey: str
+	- Return value: str
 	"""
 	def signature(self, message, PrivateKey):
 		if self.provider != None:
@@ -96,5 +81,22 @@ class RSACipher:
 			sign = Signature.getInstance(self.algorithm)
 
 		sign.initSign(self.RSAPrivateKey(PrivateKey))
-		sign.update(base64.b64decode(message))
-		return base64.b64encode(sign.sign())
+		sign.update(message)
+		return sign.sign().tostring()
+
+
+	"""
+	- message: str
+	- signedData: str
+	- PublicKey: str
+	- Return value: boolean
+	"""
+	def verify(self, message, signedData, PublicKey):
+		if self.provider != None:
+			sign = Signature.getInstance(self.algorithm, self.provider)
+		else:
+			sign = Signature.getInstance(self.algorithm)
+
+		sign.initVerify(self.RSAPublicKey(PublicKey))
+		sign.update(message)
+		return sign.verify(signedData)

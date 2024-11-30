@@ -16,7 +16,7 @@ from java.awt import Frame
 import os
 ROOTDIR = os.getcwd()
 CONF_PATH = os.path.join(os.path.expanduser("~"), ".bcf", "BCFconf.json")
-os.system("pip install -r {} --target={}".format(os.path.join(ROOTDIR, "requirements.txt"), os.path.join(ROOTDIR, "bcf-site-packages")))
+os.system("pip install -r {} --target={} --no-user".format(os.path.join(ROOTDIR, "requirements.txt"), os.path.join(ROOTDIR, "bcf-site-packages")))
 import site
 site.addsitedir(os.path.join(ROOTDIR, "bcf-site-packages"))
 import re
@@ -25,7 +25,7 @@ import json_duplicate_keys as jdks
 from TP_HTTP_Request_Response_Parser import *
 
 from modules.SpecialCharacters import *
-from modules.Utilities import Utilities
+from modules.Utils import Utils
 from modules.Crypto.Symmetric.AESCipher import AESCipher
 from modules.Crypto.Symmetric.DESCipher import DESCipher
 from modules.Crypto.Asymmetric.RSACipher import RSACipher
@@ -59,28 +59,28 @@ PROD = True
 TARGET = "tpcybersec.com"
 EXTENSION_NAME = "Burp Cipher Framework"
 EXTENSION_VERSION = "2024.11.28"
-serverPublicKey = []
-serverPrivateKey = []
-serverSecretKey = []
-serverIV = []
-serverSalt = []
-serverPassword = []
+serverPublicKeys = []
+serverPrivateKeys = []
+serverSecretKeys = []
+serverIVs = []
+serverSalts = []
+serverPasswords = []
 
 if PROD:
 	publicKey, privateKey = generateRSAKey()
-	myPublicKey = [ "-----BEGIN PUBLIC KEY-----"+publicKey+"-----END PUBLIC KEY-----" ]
-	myPrivateKey = [ "-----BEGIN PRIVATE KEY-----"+privateKey+"-----END PRIVATE KEY-----" ]
-	mySecretKey = [ Utilities.RandomString(32) ]
-	myIV = [ Utilities.RandomString(16) ]
-	mySalt = [ Utilities.RandomString(16) ]
-	myPassword = [ Utilities.RandomString(16) ]
+	clientPublicKeys = [ "-----BEGIN PUBLIC KEY-----"+publicKey+"-----END PUBLIC KEY-----" ]
+	clientPrivateKeys = [ "-----BEGIN PRIVATE KEY-----"+privateKey+"-----END PRIVATE KEY-----" ]
+	clientSecretKeys = [ Utils.RandomString(32) ]
+	clientIVs = [ Utils.RandomString(16) ]
+	clientSalts = [ Utils.RandomString(16) ]
+	clientPasswords = [ Utils.RandomString(16) ]
 else:
-	myPublicKey = [ "-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuTwspB6ubxVDBIb7IL7sSinHDmZLk/7RYzOWzVmLZo7dzBKiOmAbvFMMGRXFZ/37eThQ7VP31qe6MCH7PhtuP+KKOFpfgQc3O9umo78Qut4NGuCYNiuRrRx2jv1KESS+zIxllelx/JmEbtrME3boMZJ7W/y/SL8dfhYuGZYuqrGOe2ZRwekWkxAUJlAlHT/keDU8qU3oGDgVIn6Ck5MW0o8yBoMsm7o1LfvAGdt5jdxATXy1pzIi3Tr/bLVVkOPmaYrmRQ1McQLSekGA0+hn/MSMTIKRBA4JtSLaQ7YPZQPqwlvYm56958Lr8FPcQ7dz3KXWRY5wG+KSf+3vWnRZ3QIDAQAB-----END PUBLIC KEY-----" ]
-	myPrivateKey = [ "-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5PCykHq5vFUMEhvsgvuxKKccOZkuT/tFjM5bNWYtmjt3MEqI6YBu8UwwZFcVn/ft5OFDtU/fWp7owIfs+G24/4oo4Wl+BBzc726ajvxC63g0a4Jg2K5GtHHaO/UoRJL7MjGWV6XH8mYRu2swTdugxkntb/L9Ivx1+Fi4Zli6qsY57ZlHB6RaTEBQmUCUdP+R4NTypTegYOBUifoKTkxbSjzIGgyybujUt+8AZ23mN3EBNfLWnMiLdOv9stVWQ4+ZpiuZFDUxxAtJ6QYDT6Gf8xIxMgpEEDgm1ItpDtg9lA+rCW9ibnr3nwuvwU9xDt3PcpdZFjnAb4pJ/7e9adFndAgMBAAECggEAAQJP5/D22EoQXGTz10DS/rBtkimCfeLkdxrf1myHct6SXLs5QQInBIabSUOyGJfsl8NzxWcwsW2meP6mZLc3iYeNYzMy0/wbE+tlY/z1dV8iSSQyEBF6sKu4BZ1hmuhNVcXqA8AKy+p2Kzhr5is+po56t4yP6jCIU5iBVchYprtggIeLUDAKIGterKEYxJt/N8pdJ0oGhx4cNxcRBDylqdm0HJphyP19BtBOsFtdT9cN6khNpsWGl7UirvlI8eoJxfkXzSgRLn0XoZhl1gDKAD9XCWnII9nzZyINUY1ICG2fISMMGGCNs9YmaY0wzMkhNvty8fPoWH+XrvNyomxIQQKBgQDiMQqPsRYZEw51CsGyyJFALHUfCxsLv6lXeFgCzBY74rksF4CrrNR1rcrvbMe06P54el+dtGevnpb+C1x/iFUkncGW6hNZii/dpKlxUvFTnYYWAITOiOJltDliFlXt7jCZEkGO9WcYRmTibve3pgjxB79MxEo4bJQCRSHTd6ZaLQKBgQDRpWUxaA5IdwuX7/pxG9ekFvxkJCpjDj14rkA832SLs1Zoq/d4D6/0WTp+c6wHL7fzU1DFbgCwB560ktlAvI77J6tapl1hps6RYh9H3bz+Hb6d6eFlhdyUKuTX1XXw6RcK3pYtYOltavl3bwAal/7TEKjrdS59qwx2BlsbQvQ8cQKBgQCHjjRyIQLJTC5h3mxvJNxHxVz7mcA/rkFidnDoXD8G7L1ku0EVoaJCVEFGc77LoMbAlTYwYSmyiiybW1u34pCEPTcDpoyqILLG9iPGEpsmLUVqci0lScvEf9nT+ubMjO77DYHUlyWN2sIjIbW7jfnV2XrAGvMQFaIuKhg3j4FWkQKBgQCYfp2QBae2EFnviBD864q9AjdOxHvMl9QhD2cMoFZrw+SLuOMGgyqzK6B/0LYGeDBvH2B2a+C2KqTHprW/ACllCWL8Sl1MpeBGIkCsrt9FXO+FwFVC2s8rO9RAJzZmKbaoImbM1VyWSaTyulwx+/PRJaIpu5A4uw4SX+cvelFcEQKBgHz2GicI/2cgYlRaeeR8tDSrfVNkhkF1qQZpC3GlTLMjmzZQzLXkjxvYRjNfSJaTZ9CMlaD1PFnqu7Uk9KhUwkClGnSsvFBO2MrRh6P32XS5eDVoP7jZ1pk5/dvuB1RSJqLT63FRaBi8XPSPeT/9po9lCfipK2tlNnggFMPZf3qQ-----END PRIVATE KEY-----" ]
-	mySecretKey = [ "C]$L)D}Sd<s!eRkW.hZT`MK9jQGN[4z~" ]
-	myIV = [ "X.4njY@(,RN&~f*W" ]
-	mySalt = [ "z#}k%>v'53^P<4Ky" ]
-	myPassword = [ "We4K=T!q@F#98zPw" ]
+	clientPublicKeys = [ "-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuTwspB6ubxVDBIb7IL7sSinHDmZLk/7RYzOWzVmLZo7dzBKiOmAbvFMMGRXFZ/37eThQ7VP31qe6MCH7PhtuP+KKOFpfgQc3O9umo78Qut4NGuCYNiuRrRx2jv1KESS+zIxllelx/JmEbtrME3boMZJ7W/y/SL8dfhYuGZYuqrGOe2ZRwekWkxAUJlAlHT/keDU8qU3oGDgVIn6Ck5MW0o8yBoMsm7o1LfvAGdt5jdxATXy1pzIi3Tr/bLVVkOPmaYrmRQ1McQLSekGA0+hn/MSMTIKRBA4JtSLaQ7YPZQPqwlvYm56958Lr8FPcQ7dz3KXWRY5wG+KSf+3vWnRZ3QIDAQAB-----END PUBLIC KEY-----" ]
+	clientPrivateKeys = [ "-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5PCykHq5vFUMEhvsgvuxKKccOZkuT/tFjM5bNWYtmjt3MEqI6YBu8UwwZFcVn/ft5OFDtU/fWp7owIfs+G24/4oo4Wl+BBzc726ajvxC63g0a4Jg2K5GtHHaO/UoRJL7MjGWV6XH8mYRu2swTdugxkntb/L9Ivx1+Fi4Zli6qsY57ZlHB6RaTEBQmUCUdP+R4NTypTegYOBUifoKTkxbSjzIGgyybujUt+8AZ23mN3EBNfLWnMiLdOv9stVWQ4+ZpiuZFDUxxAtJ6QYDT6Gf8xIxMgpEEDgm1ItpDtg9lA+rCW9ibnr3nwuvwU9xDt3PcpdZFjnAb4pJ/7e9adFndAgMBAAECggEAAQJP5/D22EoQXGTz10DS/rBtkimCfeLkdxrf1myHct6SXLs5QQInBIabSUOyGJfsl8NzxWcwsW2meP6mZLc3iYeNYzMy0/wbE+tlY/z1dV8iSSQyEBF6sKu4BZ1hmuhNVcXqA8AKy+p2Kzhr5is+po56t4yP6jCIU5iBVchYprtggIeLUDAKIGterKEYxJt/N8pdJ0oGhx4cNxcRBDylqdm0HJphyP19BtBOsFtdT9cN6khNpsWGl7UirvlI8eoJxfkXzSgRLn0XoZhl1gDKAD9XCWnII9nzZyINUY1ICG2fISMMGGCNs9YmaY0wzMkhNvty8fPoWH+XrvNyomxIQQKBgQDiMQqPsRYZEw51CsGyyJFALHUfCxsLv6lXeFgCzBY74rksF4CrrNR1rcrvbMe06P54el+dtGevnpb+C1x/iFUkncGW6hNZii/dpKlxUvFTnYYWAITOiOJltDliFlXt7jCZEkGO9WcYRmTibve3pgjxB79MxEo4bJQCRSHTd6ZaLQKBgQDRpWUxaA5IdwuX7/pxG9ekFvxkJCpjDj14rkA832SLs1Zoq/d4D6/0WTp+c6wHL7fzU1DFbgCwB560ktlAvI77J6tapl1hps6RYh9H3bz+Hb6d6eFlhdyUKuTX1XXw6RcK3pYtYOltavl3bwAal/7TEKjrdS59qwx2BlsbQvQ8cQKBgQCHjjRyIQLJTC5h3mxvJNxHxVz7mcA/rkFidnDoXD8G7L1ku0EVoaJCVEFGc77LoMbAlTYwYSmyiiybW1u34pCEPTcDpoyqILLG9iPGEpsmLUVqci0lScvEf9nT+ubMjO77DYHUlyWN2sIjIbW7jfnV2XrAGvMQFaIuKhg3j4FWkQKBgQCYfp2QBae2EFnviBD864q9AjdOxHvMl9QhD2cMoFZrw+SLuOMGgyqzK6B/0LYGeDBvH2B2a+C2KqTHprW/ACllCWL8Sl1MpeBGIkCsrt9FXO+FwFVC2s8rO9RAJzZmKbaoImbM1VyWSaTyulwx+/PRJaIpu5A4uw4SX+cvelFcEQKBgHz2GicI/2cgYlRaeeR8tDSrfVNkhkF1qQZpC3GlTLMjmzZQzLXkjxvYRjNfSJaTZ9CMlaD1PFnqu7Uk9KhUwkClGnSsvFBO2MrRh6P32XS5eDVoP7jZ1pk5/dvuB1RSJqLT63FRaBi8XPSPeT/9po9lCfipK2tlNnggFMPZf3qQ-----END PRIVATE KEY-----" ]
+	clientSecretKeys = [ "C]$L)D}Sd<s!eRkW.hZT`MK9jQGN[4z~" ]
+	clientIVs = [ "X.4njY@(,RN&~f*W" ]
+	clientSalts = [ "z#}k%>v'53^P<4Ky" ]
+	clientPasswords = [ "We4K=T!q@F#98zPw" ]
 
 
 
@@ -91,15 +91,15 @@ if not os.path.isfile(CONF_PATH):
 
 	f = open(CONF_PATH, "w")
 
-	JDKSObject_BCFconf = jdks.loads(Utilities.base64Decode("eyJjb25maWciOnsiZXh0ZW5zaW9uX25hbWUiOiJCdXJwIENpcGhlciBGcmFtZXdvcmsiLCJleHRlbnNpb25fdmVyc2lvbiI6IjIwMjQuMTEuMjgiLCJzZXJ2ZXJQdWJsaWNLZXkiOltdLCJzZXJ2ZXJQcml2YXRlS2V5IjpbXSwic2VydmVyU2VjcmV0S2V5IjpbXSwic2VydmVySVYiOltdLCJzZXJ2ZXJTYWx0IjpbXSwic2VydmVyUGFzc3dvcmQiOltdLCJteVB1YmxpY0tleSI6W10sIm15UHJpdmF0ZUtleSI6W10sIm15U2VjcmV0S2V5IjpbXSwibXlJViI6W10sIm15U2FsdCI6W10sIm15UGFzc3dvcmQiOltdfSwiUHJvY2Vzc01lc3NhZ2UiOnsiUmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IFBhdGgiLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVxdWVzdFBhcnNlci5yZXF1ZXN0X3BhdGgifV19XX1dLCJSZXNwb25zZSI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBTdGF0dXMgQ29kZSIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXNwb25zZVBhcnNlci5yZXNwb25zZV9zdGF0dXNDb2RlIn1dfV19XX0sIkNpcGhlclRhYiI6eyJEZWNyeXB0UmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IE1ldGhvZCIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXF1ZXN0UGFyc2VyLnJlcXVlc3RfbWV0aG9kIn1dfV19XSwiRW5jcnlwdFJlcXVlc3QiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBIZWFkZXIgJ1JlZmVyZXInIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlcXVlc3RQYXJzZXIucmVxdWVzdF9oZWFkZXJzLnVwZGF0ZSgnUmVmZXJlcicsICdodHRwczovL3RwY3liZXJzZWMuYmNmLycpIn1dfV19XSwiRGVjcnlwdFJlc3BvbnNlIjpbeyJDT01NRU5UIjoiIiwiVEFSR0VUIjoidHBjeWJlcnNlYy5jb20iLCJQQVRURVJOIjpbXSwiREFUQSI6W3siT1VUUFVUIjpbeyJDT01NRU5UIjoiR2V0IFJlc3BvbnNlIEJvZHkgT2JqZWN0IiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlc3BvbnNlUGFyc2VyLnJlc3BvbnNlX2JvZHkifV19XX1dLCJFbmNyeXB0UmVzcG9uc2UiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBoZWFkZXIgJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbiciLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVzcG9uc2VQYXJzZXIucmVzcG9uc2VfaGVhZGVycy51cGRhdGUoJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbicsICcqJykifV19XX1dfX0=").decode(), ordered_dict=True, _isDebug_=True)
+	JDKSObject_BCFconf = jdks.loads(Utils.base64Decode("eyJjb25maWciOnsiZXh0ZW5zaW9uX25hbWUiOiJCdXJwIENpcGhlciBGcmFtZXdvcmsiLCJleHRlbnNpb25fdmVyc2lvbiI6IjIwMjQuMTEuMjgiLCJzZXJ2ZXJQdWJsaWNLZXlzIjpbXSwic2VydmVyUHJpdmF0ZUtleXMiOltdLCJzZXJ2ZXJTZWNyZXRLZXlzIjpbXSwic2VydmVySVZzIjpbXSwic2VydmVyU2FsdHMiOltdLCJzZXJ2ZXJQYXNzd29yZHMiOltdLCJjbGllbnRQdWJsaWNLZXlzIjpbXSwiY2xpZW50UHJpdmF0ZUtleXMiOltdLCJjbGllbnRTZWNyZXRLZXlzIjpbXSwiY2xpZW50SVZzIjpbXSwiY2xpZW50U2FsdHMiOltdLCJjbGllbnRQYXNzd29yZHMiOltdfSwiUHJvY2Vzc01lc3NhZ2UiOnsiUmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IFBhdGgiLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVxdWVzdFBhcnNlci5yZXF1ZXN0X3BhdGgifV19XX1dLCJSZXNwb25zZSI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBTdGF0dXMgQ29kZSIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXNwb25zZVBhcnNlci5yZXNwb25zZV9zdGF0dXNDb2RlIn1dfV19XX0sIkNpcGhlclRhYiI6eyJEZWNyeXB0UmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IE1ldGhvZCIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXF1ZXN0UGFyc2VyLnJlcXVlc3RfbWV0aG9kIn1dfV19XSwiRW5jcnlwdFJlcXVlc3QiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBIZWFkZXIgJ1JlZmVyZXInIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlcXVlc3RQYXJzZXIucmVxdWVzdF9oZWFkZXJzLnVwZGF0ZSgnUmVmZXJlcicsICdodHRwczovL3RwY3liZXJzZWMuYmNmLycpIn1dfV19XSwiRGVjcnlwdFJlc3BvbnNlIjpbeyJDT01NRU5UIjoiIiwiVEFSR0VUIjoidHBjeWJlcnNlYy5jb20iLCJQQVRURVJOIjpbXSwiREFUQSI6W3siT1VUUFVUIjpbeyJDT01NRU5UIjoiR2V0IFJlc3BvbnNlIEJvZHkgT2JqZWN0IiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlc3BvbnNlUGFyc2VyLnJlc3BvbnNlX2JvZHkifV19XX1dLCJFbmNyeXB0UmVzcG9uc2UiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBoZWFkZXIgJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbiciLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVzcG9uc2VQYXJzZXIucmVzcG9uc2VfaGVhZGVycy51cGRhdGUoJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbicsICcqJykifV19XX1dfX0=").decode(), ordered_dict=True, _isDebug_=True)
 	JDKSObject_BCFconf.update("config||extension_name", EXTENSION_NAME)
 	JDKSObject_BCFconf.update("config||extension_version", EXTENSION_VERSION)
-	JDKSObject_BCFconf.update("config||myPublicKey", [re.findall("-----BEGIN PUBLIC KEY-----(.+?)-----END PUBLIC KEY-----", myPublicKey[0])[0]])
-	JDKSObject_BCFconf.update("config||myPrivateKey", [re.findall("-----BEGIN PRIVATE KEY-----(.+?)-----END PRIVATE KEY-----", myPrivateKey[0])[0]])
-	JDKSObject_BCFconf.update("config||mySecretKey", mySecretKey)
-	JDKSObject_BCFconf.update("config||myIV", myIV)
-	JDKSObject_BCFconf.update("config||mySalt", mySalt)
-	JDKSObject_BCFconf.update("config||myPassword", myPassword)
+	JDKSObject_BCFconf.update("config||clientPublicKeys", [re.findall("-----BEGIN PUBLIC KEY-----(.+?)-----END PUBLIC KEY-----", clientPublicKeys[0])[0]])
+	JDKSObject_BCFconf.update("config||clientPrivateKeys", [re.findall("-----BEGIN PRIVATE KEY-----(.+?)-----END PRIVATE KEY-----", clientPrivateKeys[0])[0]])
+	JDKSObject_BCFconf.update("config||clientSecretKeys", clientSecretKeys)
+	JDKSObject_BCFconf.update("config||clientIVs", clientIVs)
+	JDKSObject_BCFconf.update("config||clientSalts", clientSalts)
+	JDKSObject_BCFconf.update("config||clientPasswords", clientPasswords)
 	JDKSObject_BCFconf.update("ProcessMessage||Request||$0$||TARGET", TARGET)
 	JDKSObject_BCFconf.update("ProcessMessage||Response||$0$||TARGET", TARGET)
 	JDKSObject_BCFconf.update("CipherTab||DecryptRequest||$0$||TARGET", TARGET)
@@ -111,25 +111,25 @@ if not os.path.isfile(CONF_PATH):
 	f.close()
 
 
-print(Utilities.base64Decode("CiAgIF9fXyAgICAgICAgICAgICAgICAgICAgICAgICBfX18gIF8gICAgICAgICBfICAgICAgICAgICAgICAgICAgICAgX19fICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIF8KICAvIF9fXCBfICAgXyAgXyBfXyAgXyBfXyAgICAgLyBfX1woXykgXyBfXyAgfCB8X18gICAgX19fICBfIF9fICAgIC8gX19cIF8gX18gICBfXyBfICBfIF9fIF9fXyAgICBfX18gX18gICAgICBfXyAgX19fICAgXyBfXyB8IHwgX18KIC9fX1wvL3wgfCB8IHx8ICdfX3x8ICdfIFwgICAvIC8gICB8IHx8ICdfIFwgfCAnXyBcICAvIF8gXHwgJ19ffCAgLyBfXCAgfCAnX198IC8gX2AgfHwgJ18gYCBfIFwgIC8gXyBcXCBcIC9cIC8gLyAvIF8gXCB8ICdfX3x8IHwvIC8KLyBcLyAgXHwgfF98IHx8IHwgICB8IHxfKSB8IC8gL19fXyB8IHx8IHxfKSB8fCB8IHwgfHwgIF9fL3wgfCAgICAvIC8gICAgfCB8ICAgfCAoX3wgfHwgfCB8IHwgfCB8fCAgX18vIFwgViAgViAvIHwgKF8pIHx8IHwgICB8ICAgPApcX19fX18vIFxfXyxffHxffCAgIHwgLl9fLyAgXF9fX18vIHxffHwgLl9fLyB8X3wgfF98IFxfX198fF98ICAgIFwvICAgICB8X3wgICAgXF9fLF98fF98IHxffCB8X3wgXF9fX3wgIFxfL1xfLyAgIFxfX18vIHxffCAgIHxffFxfXAogICAgICAgICAgICAgICAgICAgIHxffCAgICAgICAgICAgICAgIHxffAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZ7dmVyc2lvbn0gYnkgVHJ1b2MgUGhhbiAoQHRydW9jcGhhbikKCg==").decode().format(version=EXTENSION_VERSION))
+print(Utils.base64Decode("CiAgIF9fXyAgICAgICAgICAgICAgICAgICAgICAgICBfX18gIF8gICAgICAgICBfICAgICAgICAgICAgICAgICAgICAgX19fICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIF8KICAvIF9fXCBfICAgXyAgXyBfXyAgXyBfXyAgICAgLyBfX1woXykgXyBfXyAgfCB8X18gICAgX19fICBfIF9fICAgIC8gX19cIF8gX18gICBfXyBfICBfIF9fIF9fXyAgICBfX18gX18gICAgICBfXyAgX19fICAgXyBfXyB8IHwgX18KIC9fX1wvL3wgfCB8IHx8ICdfX3x8ICdfIFwgICAvIC8gICB8IHx8ICdfIFwgfCAnXyBcICAvIF8gXHwgJ19ffCAgLyBfXCAgfCAnX198IC8gX2AgfHwgJ18gYCBfIFwgIC8gXyBcXCBcIC9cIC8gLyAvIF8gXCB8ICdfX3x8IHwvIC8KLyBcLyAgXHwgfF98IHx8IHwgICB8IHxfKSB8IC8gL19fXyB8IHx8IHxfKSB8fCB8IHwgfHwgIF9fL3wgfCAgICAvIC8gICAgfCB8ICAgfCAoX3wgfHwgfCB8IHwgfCB8fCAgX18vIFwgViAgViAvIHwgKF8pIHx8IHwgICB8ICAgPApcX19fX18vIFxfXyxffHxffCAgIHwgLl9fLyAgXF9fX18vIHxffHwgLl9fLyB8X3wgfF98IFxfX198fF98ICAgIFwvICAgICB8X3wgICAgXF9fLF98fF98IHxffCB8X3wgXF9fX3wgIFxfL1xfLyAgIFxfX18vIHxffCAgIHxffFxfXAogICAgICAgICAgICAgICAgICAgIHxffCAgICAgICAgICAgICAgIHxffAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZ7dmVyc2lvbn0gYnkgVHJ1b2MgUGhhbiAoQHRydW9jcGhhbikKCg==").decode().format(version=EXTENSION_VERSION))
 
 
 
 ConfigInfo = jdks.load(CONF_PATH, _isDebug_=True).get("config")["value"]
 if type(ConfigInfo["extension_name"]) in [unicode, str] and len(ConfigInfo["extension_name"]) > 0: EXTENSION_NAME = ConfigInfo["extension_name"]
 if type(ConfigInfo["extension_version"]) in [unicode, str] and len(ConfigInfo["extension_version"]) > 0: EXTENSION_VERSION = ConfigInfo["extension_version"]
-if type(ConfigInfo["serverPublicKey"]) == list and len(ConfigInfo["serverPublicKey"]) > 0: serverPublicKey = ConfigInfo["serverPublicKey"]
-if type(ConfigInfo["serverPrivateKey"]) == list and len(ConfigInfo["serverPrivateKey"]) > 0: serverPrivateKey = ConfigInfo["serverPrivateKey"]
-if type(ConfigInfo["serverSecretKey"]) == list and len(ConfigInfo["serverSecretKey"]) > 0: serverSecretKey = ConfigInfo["serverSecretKey"]
-if type(ConfigInfo["serverIV"]) == list and len(ConfigInfo["serverIV"]) > 0: serverIV = ConfigInfo["serverIV"]
-if type(ConfigInfo["serverSalt"]) == list and len(ConfigInfo["serverSalt"]) > 0: serverSalt = ConfigInfo["serverSalt"]
-if type(ConfigInfo["serverPassword"]) == list and len(ConfigInfo["serverPassword"]) > 0: serverPassword = ConfigInfo["serverPassword"]
-if type(ConfigInfo["myPublicKey"]) == list and len(ConfigInfo["myPublicKey"]) > 0: myPublicKey = ConfigInfo["myPublicKey"]
-if type(ConfigInfo["myPrivateKey"]) == list and len(ConfigInfo["myPrivateKey"]) > 0: myPrivateKey = ConfigInfo["myPrivateKey"]
-if type(ConfigInfo["mySecretKey"]) == list and len(ConfigInfo["mySecretKey"])> 0: mySecretKey = ConfigInfo["mySecretKey"]
-if type(ConfigInfo["myIV"]) == list and len(ConfigInfo["myIV"]) > 0: myIV = ConfigInfo["myIV"]
-if type(ConfigInfo["mySalt"]) == list and len(ConfigInfo["mySalt"]) > 0: mySalt = ConfigInfo["mySalt"]
-if type(ConfigInfo["myPassword"]) == list and len(ConfigInfo["myPassword"]) > 0: myPassword = ConfigInfo["myPassword"]
+if type(ConfigInfo["serverPublicKeys"]) == list and len(ConfigInfo["serverPublicKeys"]) > 0: serverPublicKeys = ConfigInfo["serverPublicKeys"]
+if type(ConfigInfo["serverPrivateKeys"]) == list and len(ConfigInfo["serverPrivateKeys"]) > 0: serverPrivateKeys = ConfigInfo["serverPrivateKeys"]
+if type(ConfigInfo["serverSecretKeys"]) == list and len(ConfigInfo["serverSecretKeys"]) > 0: serverSecretKeys = ConfigInfo["serverSecretKeys"]
+if type(ConfigInfo["serverIVs"]) == list and len(ConfigInfo["serverIVs"]) > 0: serverIVs = ConfigInfo["serverIVs"]
+if type(ConfigInfo["serverSalts"]) == list and len(ConfigInfo["serverSalts"]) > 0: serverSalts = ConfigInfo["serverSalts"]
+if type(ConfigInfo["serverPasswords"]) == list and len(ConfigInfo["serverPasswords"]) > 0: serverPasswords = ConfigInfo["serverPasswords"]
+if type(ConfigInfo["clientPublicKeys"]) == list and len(ConfigInfo["clientPublicKeys"]) > 0: clientPublicKeys = ConfigInfo["clientPublicKeys"]
+if type(ConfigInfo["clientPrivateKeys"]) == list and len(ConfigInfo["clientPrivateKeys"]) > 0: clientPrivateKeys = ConfigInfo["clientPrivateKeys"]
+if type(ConfigInfo["clientSecretKeys"]) == list and len(ConfigInfo["clientSecretKeys"])> 0: clientSecretKeys = ConfigInfo["clientSecretKeys"]
+if type(ConfigInfo["clientIVs"]) == list and len(ConfigInfo["clientIVs"]) > 0: clientIVs = ConfigInfo["clientIVs"]
+if type(ConfigInfo["clientSalts"]) == list and len(ConfigInfo["clientSalts"]) > 0: clientSalts = ConfigInfo["clientSalts"]
+if type(ConfigInfo["clientPasswords"]) == list and len(ConfigInfo["clientPasswords"]) > 0: clientPasswords = ConfigInfo["clientPasswords"]
 
 
 
@@ -371,7 +371,7 @@ class CipherMessageEditorTab(IMessageEditorTab):
 		self._extender = extender
 		self.editable = editable
 		self.CipherTab = jdks.load(CONF_PATH, _isDebug_=True).get("CipherTab")["value"]
-		with open(CONF_PATH, "rb") as Jfile: self.BCFconf_hash = MD5().hexdigest(Utilities.base64Encode(Jfile.read()))
+		with open(CONF_PATH, "rb") as Jfile: self.BCFconf_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
 
 
 	def getUiComponent(self):
@@ -398,7 +398,7 @@ class CipherMessageEditorTab(IMessageEditorTab):
 
 			with open(CONF_PATH, "rb") as Jfile:
 				try:
-					BCFconf_hash = MD5().hexdigest(Utilities.base64Encode(Jfile.read()))
+					BCFconf_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
 					if self.BCFconf_hash != BCFconf_hash:
 						self.CipherTab = jdks.load(CONF_PATH, _isDebug_=True).get("CipherTab")["value"]
 						self.BCFconf_hash = BCFconf_hash
@@ -614,7 +614,7 @@ class CipherMessageEditorTab(IMessageEditorTab):
 							print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 						break
 
-				RequestParser.request_headers.delete("X-BCF-ENABLED", case_insensitive=True)
+				ResponseParser.response_headers.delete("X-BCF-ENABLED", case_insensitive=True)
 				newContent = ResponseParser.unparse(update_content_length=True)
 				for k,v in SpecialCharacters.items():
 					newContent = newContent.replace(v,k)

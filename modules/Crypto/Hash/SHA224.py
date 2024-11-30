@@ -1,9 +1,8 @@
 import java.security.MessageDigest as MessageDigest
-import base64
 
 class SHA224:
 	"""
-	- provider: raw
+	- provider: str
 	"""
 	def __init__(self, provider=None):
 		self.algorithm = "SHA-224"
@@ -11,21 +10,19 @@ class SHA224:
 
 
 	"""
-	- message: base64 encode
-	- Return value: base64 encode
+	- message: str
+	- Return value: str
 	"""
 	def digest(self, message):
-		message = base64.b64decode(message)
-
 		if self.provider != None:
-			return base64.b64encode(MessageDigest.getInstance(self.algorithm, self.provider).digest(message))
+			return MessageDigest.getInstance(self.algorithm, self.provider).digest(message).tostring()
 		else:
-			return base64.b64encode(MessageDigest.getInstance(self.algorithm).digest(message))
+			return MessageDigest.getInstance(self.algorithm).digest(message).tostring()
 
 
 	"""
-	- message: base64 encode
-	- Return value: hex string
+	- message: str
+	- Return value: hex str
 	"""
 	def hexdigest(self, message):
-		return "".join(["%02x"%ord(c) for c in base64.b64decode(self.digest(message))])
+		return "".join(["%02x"%ord(c) for c in self.digest(message)])

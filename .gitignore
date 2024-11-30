@@ -1,8 +1,12 @@
 *
 !/.gitignore
+!/LICENSE
 !/README.md
 !/requirements.txt
+!/SECURITY.md
 !/bcf.py
+!/static
+!/static/BCF.jpg
 !/modules
 !/modules/__init__.py
 !/modules/SpecialCharacters.py
@@ -31,6 +35,6 @@
 !/modules/Crypto/Hash/SHA224.py
 !/modules/Crypto/Hash/SHA384.py
 !/modules/Crypto/Hash/SHA512.py
-!/modules/Utilities
-!/modules/Utilities/__init__.py
-!/modules/Utilities/Utilities.py
+!/modules/Utils
+!/modules/Utils/__init__.py
+!/modules/Utils/Utils.py

@@ -1,11 +1,9 @@
 import javax.crypto.Mac as Mac
 import javax.crypto.spec.SecretKeySpec as SecretKeySpec
 
-import base64
-
 class HMAC_SHA512:
 	"""
-	- provider: raw
+	- provider: str
 	"""
 	def __init__(self, provider=None):
 		self.algorithm = "HmacSHA512"
@@ -13,14 +11,11 @@ class HMAC_SHA512:
 
 
 	"""
-	- message: base64 encode
-	- SECRET_KEY: base64 encode
-	- Return value: base64 encode
+	- message: str
+	- SECRET_KEY: str
+	- Return value: str
 	"""
 	def digest(self, message, SECRET_KEY):
-		message = base64.b64decode(message)
-		SECRET_KEY = base64.b64decode(SECRET_KEY)
-
 		if self.provider != None:
 			mac = Mac.getInstance(self.algorithm, self.provider)
 		else:
@@ -30,13 +25,13 @@ class HMAC_SHA512:
 		mac.init(secretKeySpec)
 		hmac = mac.doFinal(message)
 
-		return base64.b64encode(hmac)
+		return hmac.tostring()
 
 
 	"""
-	- message: base64 encode
-	- SECRET_KEY: base64 encode
-	- Return value: hex string
+	- message: str
+	- SECRET_KEY: str
+	- Return value: hex str
 	"""
 	def hexdigest(self, message, SECRET_KEY):
-		return "".join(["%02x"%ord(c) for c in base64.b64decode(self.digest(message, SECRET_KEY))])
+		return "".join(["%02x"%ord(c) for c in self.digest(message, SECRET_KEY)])

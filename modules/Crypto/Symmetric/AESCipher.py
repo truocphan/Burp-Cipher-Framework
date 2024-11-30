@@ -1,69 +1,62 @@
 import javax.crypto.Cipher as Cipher
 import javax.crypto.spec.SecretKeySpec as SecretKeySpec
 import javax.crypto.spec.IvParameterSpec as IvParameterSpec
-
 import javax.crypto.spec.GCMParameterSpec as GCMParameterSpec
-
-import base64
 
 class AESCipher:
 	"""
-	- algorithm: raw // "AES/CBC/PKCS5padding", "AES/CBC/PKCS7Padding", "AES/CTR/NoPadding", "AES/GCM/NoPadding"
-	- provider: raw
+	- algorithm: str
+	- provider: str
 	"""
 	def __init__(self, algorithm, provider=None):
 		self.algorithm = algorithm
 		self.provider = provider
+		self.mode = algorithm.split("/")[1]
 
 
 	"""
-	- PlainText: base64 encode
-	- SECRET_KEY: base64 encode
-	- IV: base64 encode
-	- Return value: base64 encode
+	- PlainText: str
+	- SECRET_KEY: str // length of SECRET_KEY: 16, 24, 32
+	- IV: str // length of IV: 16 for CBC, CFB, OFB, GCM
+	- GCM_Tag: int // 128
+	- Return value: str
 	"""
-	def encrypt(self, PlainText, SECRET_KEY, IV, GCM_Tag=128):
-		PlainText = base64.b64decode(PlainText)
-		SECRET_KEY = base64.b64decode(SECRET_KEY)
-		IV = base64.b64decode(IV)
-
-
+	def encrypt(self, PlainText, SECRET_KEY, IV=None, GCM_Tag=128):
 		if self.provider != None:
 			instance = Cipher.getInstance(self.algorithm, self.provider)
 		else:
 			instance = Cipher.getInstance(self.algorithm)
 
-		if self.algorithm == "AES/GCM/NoPadding":
+		if self.mode == "ECB":
+			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"))
+		elif self.mode == "GCM":
 			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
 		else:
 			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
 
 		CipherText = instance.doFinal(PlainText)
-
-		return base64.b64encode(CipherText)
+		return CipherText.tostring()
 
 
 	"""
-	- CipherText: base64 encode
-	- SECRET_KEY: base64 encode
-	- IV: base64 encode
-	- Return value: base64 encode
+	- CipherText: str
+	- SECRET_KEY: str // length of SECRET_KEY: 16, 24, 32
+	- IV: str // length of IV: 16 for CBC, CFB, OFB, GCM
+	- GCM_Tag: int // 128
+	- Return value: str
 	"""
-	def decrypt(self, CipherText, SECRET_KEY, IV, GCM_Tag=128):
-		CipherText = base64.b64decode(CipherText)
-		SECRET_KEY = base64.b64decode(SECRET_KEY)
-		IV = base64.b64decode(IV)
-
+	def decrypt(self, CipherText, SECRET_KEY, IV=None, GCM_Tag=128):
 		if self.provider != None:
 			instance = Cipher.getInstance(self.algorithm, self.provider)
 		else:
 			instance = Cipher.getInstance(self.algorithm)
 
-		if self.algorithm == "AES/GCM/NoPadding":
+		if self.mode == "ECB":
+			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"))
+		elif self.mode == "GCM":
 			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
 		else:
 			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
 
 		PlainText = instance.doFinal(CipherText)
-
-		return  base64.b64encode(PlainText)
+		return  PlainText.tostring()
