@@ -475,15 +475,8 @@ SHA512().hexdigest('TPCyberSec')
 
 ---
 # Contributors
-<style>
-	@keyframes blinkBorder {
-		0% { border-color: transparent; }
-		50% { border-color: red; }
-		100% { border-color: transparent; }
-	}
-</style>
 <p align="left">
-	<a href="https://github.com/toannguyen3107"><img src="https://avatars.githubusercontent.com/u/99452100" width="50" height="50" alt="toannguyen3107" style="border: 3px solid transparent; border-radius: 50%; animation: blinkBorder 1s infinite; padding: 5px;"></a>
+	<a href="https://github.com/toannguyen3107"><img src="https://avatars.githubusercontent.com/u/99452100" width="50" height="50" alt="toannguyen3107" style="max-width: 100%;"></a>
 </p>
 
 ---
