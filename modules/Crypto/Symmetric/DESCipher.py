@@ -26,9 +26,9 @@ class DESCipher:
 			instance = Cipher.getInstance(self.algorithm)
 
 		if self.mode == "ECB":
-			instance.init(1, SecretKeySpec(SECRET_KEY, "DES"))
+			instance.init(Cipher.ENCRYPT_MODE, SecretKeySpec(SECRET_KEY, "DES"))
 		else:
-			instance.init(1, SecretKeySpec(SECRET_KEY, "DES"), IvParameterSpec(IV))
+			instance.init(Cipher.ENCRYPT_MODE, SecretKeySpec(SECRET_KEY, "DES"), IvParameterSpec(IV))
 
 		CipherText = instance.doFinal(PlainText)
 		return CipherText.tostring()
@@ -47,9 +47,9 @@ class DESCipher:
 			instance = Cipher.getInstance(self.algorithm)
 
 		if self.mode == "ECB":
-			instance.init(2, SecretKeySpec(SECRET_KEY, "DES"))
+			instance.init(Cipher.DECRYPT_MODE, SecretKeySpec(SECRET_KEY, "DES"))
 		else:
-			instance.init(2, SecretKeySpec(SECRET_KEY, "DES"), IvParameterSpec(IV))
+			instance.init(Cipher.DECRYPT_MODE, SecretKeySpec(SECRET_KEY, "DES"), IvParameterSpec(IV))
 
 		PlainText = instance.doFinal(CipherText)
 		return  PlainText.tostring()

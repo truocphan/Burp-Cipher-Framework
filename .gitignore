@@ -35,6 +35,3 @@
 !/modules/Crypto/Hash/SHA224.py
 !/modules/Crypto/Hash/SHA384.py
 !/modules/Crypto/Hash/SHA512.py
-!/modules/Utils
-!/modules/Utils/__init__.py
-!/modules/Utils/Utils.py

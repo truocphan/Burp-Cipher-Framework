@@ -12,6 +12,8 @@ from javax.swing import JMenu
 from javax.swing import JCheckBoxMenuItem
 from javax.swing import UIManager
 from java.awt import Frame
+from java.awt.event import ActionEvent
+from java.awt.event import ActionListener
 
 import os
 ROOTDIR = os.getcwd()
@@ -22,10 +24,10 @@ site.addsitedir(os.path.join(ROOTDIR, "bcf-site-packages"))
 import re
 from datetime import datetime
 import json_duplicate_keys as jdks
-from TP_HTTP_Request_Response_Parser import *
+from TP_HTTP_Request_Response_Parser import TP_HTTP_REQUEST_PARSER, TP_HTTP_RESPONSE_PARSER
+from TP_Generator import Utils, MFA_Generator, Nonce_Generator
 
 from modules.SpecialCharacters import *
-from modules.Utils import Utils
 from modules.Crypto.Symmetric.AESCipher import AESCipher
 from modules.Crypto.Symmetric.DESCipher import DESCipher
 from modules.Crypto.Asymmetric.RSACipher import RSACipher
@@ -55,7 +57,6 @@ def generateRSAKey():
 	privateKey = keyPair.getPrivate()
 	return base64.b64encode(publicKey.getEncoded()), base64.b64encode(privateKey.getEncoded())
 
-PROD = True
 TARGET = "tpcybersec.com"
 EXTENSION_NAME = "Burp Cipher Framework"
 EXTENSION_VERSION = "2024.11.28"
@@ -66,32 +67,21 @@ serverIVs = []
 serverSalts = []
 serverPasswords = []
 
-if PROD:
-	publicKey, privateKey = generateRSAKey()
-	clientPublicKeys = [ "-----BEGIN PUBLIC KEY-----"+publicKey+"-----END PUBLIC KEY-----" ]
-	clientPrivateKeys = [ "-----BEGIN PRIVATE KEY-----"+privateKey+"-----END PRIVATE KEY-----" ]
-	clientSecretKeys = [ Utils.RandomString(32) ]
-	clientIVs = [ Utils.RandomString(16) ]
-	clientSalts = [ Utils.RandomString(16) ]
-	clientPasswords = [ Utils.RandomString(16) ]
-else:
-	clientPublicKeys = [ "-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuTwspB6ubxVDBIb7IL7sSinHDmZLk/7RYzOWzVmLZo7dzBKiOmAbvFMMGRXFZ/37eThQ7VP31qe6MCH7PhtuP+KKOFpfgQc3O9umo78Qut4NGuCYNiuRrRx2jv1KESS+zIxllelx/JmEbtrME3boMZJ7W/y/SL8dfhYuGZYuqrGOe2ZRwekWkxAUJlAlHT/keDU8qU3oGDgVIn6Ck5MW0o8yBoMsm7o1LfvAGdt5jdxATXy1pzIi3Tr/bLVVkOPmaYrmRQ1McQLSekGA0+hn/MSMTIKRBA4JtSLaQ7YPZQPqwlvYm56958Lr8FPcQ7dz3KXWRY5wG+KSf+3vWnRZ3QIDAQAB-----END PUBLIC KEY-----" ]
-	clientPrivateKeys = [ "-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5PCykHq5vFUMEhvsgvuxKKccOZkuT/tFjM5bNWYtmjt3MEqI6YBu8UwwZFcVn/ft5OFDtU/fWp7owIfs+G24/4oo4Wl+BBzc726ajvxC63g0a4Jg2K5GtHHaO/UoRJL7MjGWV6XH8mYRu2swTdugxkntb/L9Ivx1+Fi4Zli6qsY57ZlHB6RaTEBQmUCUdP+R4NTypTegYOBUifoKTkxbSjzIGgyybujUt+8AZ23mN3EBNfLWnMiLdOv9stVWQ4+ZpiuZFDUxxAtJ6QYDT6Gf8xIxMgpEEDgm1ItpDtg9lA+rCW9ibnr3nwuvwU9xDt3PcpdZFjnAb4pJ/7e9adFndAgMBAAECggEAAQJP5/D22EoQXGTz10DS/rBtkimCfeLkdxrf1myHct6SXLs5QQInBIabSUOyGJfsl8NzxWcwsW2meP6mZLc3iYeNYzMy0/wbE+tlY/z1dV8iSSQyEBF6sKu4BZ1hmuhNVcXqA8AKy+p2Kzhr5is+po56t4yP6jCIU5iBVchYprtggIeLUDAKIGterKEYxJt/N8pdJ0oGhx4cNxcRBDylqdm0HJphyP19BtBOsFtdT9cN6khNpsWGl7UirvlI8eoJxfkXzSgRLn0XoZhl1gDKAD9XCWnII9nzZyINUY1ICG2fISMMGGCNs9YmaY0wzMkhNvty8fPoWH+XrvNyomxIQQKBgQDiMQqPsRYZEw51CsGyyJFALHUfCxsLv6lXeFgCzBY74rksF4CrrNR1rcrvbMe06P54el+dtGevnpb+C1x/iFUkncGW6hNZii/dpKlxUvFTnYYWAITOiOJltDliFlXt7jCZEkGO9WcYRmTibve3pgjxB79MxEo4bJQCRSHTd6ZaLQKBgQDRpWUxaA5IdwuX7/pxG9ekFvxkJCpjDj14rkA832SLs1Zoq/d4D6/0WTp+c6wHL7fzU1DFbgCwB560ktlAvI77J6tapl1hps6RYh9H3bz+Hb6d6eFlhdyUKuTX1XXw6RcK3pYtYOltavl3bwAal/7TEKjrdS59qwx2BlsbQvQ8cQKBgQCHjjRyIQLJTC5h3mxvJNxHxVz7mcA/rkFidnDoXD8G7L1ku0EVoaJCVEFGc77LoMbAlTYwYSmyiiybW1u34pCEPTcDpoyqILLG9iPGEpsmLUVqci0lScvEf9nT+ubMjO77DYHUlyWN2sIjIbW7jfnV2XrAGvMQFaIuKhg3j4FWkQKBgQCYfp2QBae2EFnviBD864q9AjdOxHvMl9QhD2cMoFZrw+SLuOMGgyqzK6B/0LYGeDBvH2B2a+C2KqTHprW/ACllCWL8Sl1MpeBGIkCsrt9FXO+FwFVC2s8rO9RAJzZmKbaoImbM1VyWSaTyulwx+/PRJaIpu5A4uw4SX+cvelFcEQKBgHz2GicI/2cgYlRaeeR8tDSrfVNkhkF1qQZpC3GlTLMjmzZQzLXkjxvYRjNfSJaTZ9CMlaD1PFnqu7Uk9KhUwkClGnSsvFBO2MrRh6P32XS5eDVoP7jZ1pk5/dvuB1RSJqLT63FRaBi8XPSPeT/9po9lCfipK2tlNnggFMPZf3qQ-----END PRIVATE KEY-----" ]
-	clientSecretKeys = [ "C]$L)D}Sd<s!eRkW.hZT`MK9jQGN[4z~" ]
-	clientIVs = [ "X.4njY@(,RN&~f*W" ]
-	clientSalts = [ "z#}k%>v'53^P<4Ky" ]
-	clientPasswords = [ "We4K=T!q@F#98zPw" ]
-
-
+publicKey, privateKey = generateRSAKey()
+clientPublicKeys = [ "-----BEGIN PUBLIC KEY-----"+publicKey+"-----END PUBLIC KEY-----" ]
+clientPrivateKeys = [ "-----BEGIN PRIVATE KEY-----"+privateKey+"-----END PRIVATE KEY-----" ]
+clientSecretKeys = [ Utils.RandomString(32) ]
+clientIVs = [ Utils.RandomString(16) ]
+clientSalts = [ Utils.RandomString(16) ]
+clientPasswords = [ Utils.RandomString(16) ]
 
 
 
 if not os.path.isfile(CONF_PATH):
 	if not os.path.isdir(os.path.join(os.path.expanduser("~"), ".bcf")): os.mkdir(os.path.join(os.path.expanduser("~"), ".bcf"))
 
-	f = open(CONF_PATH, "w")
+	JDKSObject_BCFconf = jdks.loads(Utils.base64Decode("eyJjb25maWciOnsiZXh0ZW5zaW9uX25hbWUiOiIiLCJleHRlbnNpb25fdmVyc2lvbiI6IiIsInNlcnZlclB1YmxpY0tleXMiOltdLCJzZXJ2ZXJQcml2YXRlS2V5cyI6W10sInNlcnZlclNlY3JldEtleXMiOltdLCJzZXJ2ZXJJVnMiOltdLCJzZXJ2ZXJTYWx0cyI6W10sInNlcnZlclBhc3N3b3JkcyI6W10sImNsaWVudFB1YmxpY0tleXMiOltdLCJjbGllbnRQcml2YXRlS2V5cyI6W10sImNsaWVudFNlY3JldEtleXMiOltdLCJjbGllbnRJVnMiOltdLCJjbGllbnRTYWx0cyI6W10sImNsaWVudFBhc3N3b3JkcyI6W119LCJQcm9jZXNzTWVzc2FnZSI6eyJSZXF1ZXN0IjpbeyJDT01NRU5UIjoiIiwiVEFSR0VUIjoidHBjeWJlcnNlYy5jb20iLCJQQVRURVJOIjpbXSwiREFUQSI6W3siQ09ORElUSU9OIjoiIiwiT1VUUFVUIjpbeyJDT01NRU5UIjoiR2V0IFJlcXVlc3QgUGF0aCIsIkxPT1BEQVRBIjoiIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlcXVlc3RQYXJzZXIucmVxdWVzdF9wYXRoIn1dfV19XSwiUmVzcG9uc2UiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJDT05ESVRJT04iOiIiLCJPVVRQVVQiOlt7IkNPTU1FTlQiOiJHZXQgU3RhdHVzIENvZGUiLCJMT09QREFUQSI6IiIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXNwb25zZVBhcnNlci5yZXNwb25zZV9zdGF0dXNDb2RlIn1dfV19XX0sIkNpcGhlclRhYiI6eyJEZWNyeXB0UmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7IkNPTkRJVElPTiI6IiIsIk9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IE1ldGhvZCIsIkxPT1BEQVRBIjoiIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlcXVlc3RQYXJzZXIucmVxdWVzdF9tZXRob2QifV19XX1dLCJFbmNyeXB0UmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7IkNPTkRJVElPTiI6IiIsIk9VVFBVVCI6W3siQ09NTUVOVCI6IlVwZGF0ZSBSZXF1ZXN0IEhlYWRlciAnUmVmZXJlciciLCJMT09QREFUQSI6IiIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXF1ZXN0UGFyc2VyLnJlcXVlc3RfaGVhZGVycy51cGRhdGUoJ1JlZmVyZXInLCAnaHR0cHM6Ly90cGN5YmVyc2VjLmJjZi8nKSJ9XX1dfV0sIkRlY3J5cHRSZXNwb25zZSI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7IkNPTkRJVElPTiI6IiIsIk9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXNwb25zZSBCb2R5IE9iamVjdCIsIkxPT1BEQVRBIjoiIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlc3BvbnNlUGFyc2VyLnJlc3BvbnNlX2JvZHkifV19XX1dLCJFbmNyeXB0UmVzcG9uc2UiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJDT05ESVRJT04iOiIiLCJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBoZWFkZXIgJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbiciLCJMT09QREFUQSI6IiIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXNwb25zZVBhcnNlci5yZXNwb25zZV9oZWFkZXJzLnVwZGF0ZSgnQWNjZXNzLUNvbnRyb2wtQWxsb3ctT3JpZ2luJywgJyonKSJ9XX1dfV19fQ=="), ordered_dict=True, _isDebug_=True)
 
-	JDKSObject_BCFconf = jdks.loads(Utils.base64Decode("eyJjb25maWciOnsiZXh0ZW5zaW9uX25hbWUiOiJCdXJwIENpcGhlciBGcmFtZXdvcmsiLCJleHRlbnNpb25fdmVyc2lvbiI6IjIwMjQuMTEuMjgiLCJzZXJ2ZXJQdWJsaWNLZXlzIjpbXSwic2VydmVyUHJpdmF0ZUtleXMiOltdLCJzZXJ2ZXJTZWNyZXRLZXlzIjpbXSwic2VydmVySVZzIjpbXSwic2VydmVyU2FsdHMiOltdLCJzZXJ2ZXJQYXNzd29yZHMiOltdLCJjbGllbnRQdWJsaWNLZXlzIjpbXSwiY2xpZW50UHJpdmF0ZUtleXMiOltdLCJjbGllbnRTZWNyZXRLZXlzIjpbXSwiY2xpZW50SVZzIjpbXSwiY2xpZW50U2FsdHMiOltdLCJjbGllbnRQYXNzd29yZHMiOltdfSwiUHJvY2Vzc01lc3NhZ2UiOnsiUmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IFBhdGgiLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVxdWVzdFBhcnNlci5yZXF1ZXN0X3BhdGgifV19XX1dLCJSZXNwb25zZSI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBTdGF0dXMgQ29kZSIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXNwb25zZVBhcnNlci5yZXNwb25zZV9zdGF0dXNDb2RlIn1dfV19XX0sIkNpcGhlclRhYiI6eyJEZWNyeXB0UmVxdWVzdCI6W3siQ09NTUVOVCI6IiIsIlRBUkdFVCI6InRwY3liZXJzZWMuY29tIiwiUEFUVEVSTiI6W10sIkRBVEEiOlt7Ik9VVFBVVCI6W3siQ09NTUVOVCI6IkdldCBSZXF1ZXN0IE1ldGhvZCIsImV4ZWNfZnVuYyI6ZmFsc2UsImNvZGUiOiJSZXF1ZXN0UGFyc2VyLnJlcXVlc3RfbWV0aG9kIn1dfV19XSwiRW5jcnlwdFJlcXVlc3QiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBIZWFkZXIgJ1JlZmVyZXInIiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlcXVlc3RQYXJzZXIucmVxdWVzdF9oZWFkZXJzLnVwZGF0ZSgnUmVmZXJlcicsICdodHRwczovL3RwY3liZXJzZWMuYmNmLycpIn1dfV19XSwiRGVjcnlwdFJlc3BvbnNlIjpbeyJDT01NRU5UIjoiIiwiVEFSR0VUIjoidHBjeWJlcnNlYy5jb20iLCJQQVRURVJOIjpbXSwiREFUQSI6W3siT1VUUFVUIjpbeyJDT01NRU5UIjoiR2V0IFJlc3BvbnNlIEJvZHkgT2JqZWN0IiwiZXhlY19mdW5jIjpmYWxzZSwiY29kZSI6IlJlc3BvbnNlUGFyc2VyLnJlc3BvbnNlX2JvZHkifV19XX1dLCJFbmNyeXB0UmVzcG9uc2UiOlt7IkNPTU1FTlQiOiIiLCJUQVJHRVQiOiJ0cGN5YmVyc2VjLmNvbSIsIlBBVFRFUk4iOltdLCJEQVRBIjpbeyJPVVRQVVQiOlt7IkNPTU1FTlQiOiJVcGRhdGUgUmVxdWVzdCBoZWFkZXIgJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbiciLCJleGVjX2Z1bmMiOmZhbHNlLCJjb2RlIjoiUmVzcG9uc2VQYXJzZXIucmVzcG9uc2VfaGVhZGVycy51cGRhdGUoJ0FjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbicsICcqJykifV19XX1dfX0=").decode(), ordered_dict=True, _isDebug_=True)
 	JDKSObject_BCFconf.update("config||extension_name", EXTENSION_NAME)
 	JDKSObject_BCFconf.update("config||extension_version", EXTENSION_VERSION)
 	JDKSObject_BCFconf.update("config||clientPublicKeys", [re.findall("-----BEGIN PUBLIC KEY-----(.+?)-----END PUBLIC KEY-----", clientPublicKeys[0])[0]])
@@ -107,15 +97,17 @@ if not os.path.isfile(CONF_PATH):
 	JDKSObject_BCFconf.update("CipherTab||DecryptResponse||$0$||TARGET", TARGET)
 	JDKSObject_BCFconf.update("CipherTab||EncryptResponse||$0$||TARGET", TARGET)
 
-	f.write(JDKSObject_BCFconf.dumps(indent=4))
-	f.close()
+	JDKSObject_BCFconf.dump(CONF_PATH, indent=4)
 
 
-print(Utils.base64Decode("CiAgIF9fXyAgICAgICAgICAgICAgICAgICAgICAgICBfX18gIF8gICAgICAgICBfICAgICAgICAgICAgICAgICAgICAgX19fICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIF8KICAvIF9fXCBfICAgXyAgXyBfXyAgXyBfXyAgICAgLyBfX1woXykgXyBfXyAgfCB8X18gICAgX19fICBfIF9fICAgIC8gX19cIF8gX18gICBfXyBfICBfIF9fIF9fXyAgICBfX18gX18gICAgICBfXyAgX19fICAgXyBfXyB8IHwgX18KIC9fX1wvL3wgfCB8IHx8ICdfX3x8ICdfIFwgICAvIC8gICB8IHx8ICdfIFwgfCAnXyBcICAvIF8gXHwgJ19ffCAgLyBfXCAgfCAnX198IC8gX2AgfHwgJ18gYCBfIFwgIC8gXyBcXCBcIC9cIC8gLyAvIF8gXCB8ICdfX3x8IHwvIC8KLyBcLyAgXHwgfF98IHx8IHwgICB8IHxfKSB8IC8gL19fXyB8IHx8IHxfKSB8fCB8IHwgfHwgIF9fL3wgfCAgICAvIC8gICAgfCB8ICAgfCAoX3wgfHwgfCB8IHwgfCB8fCAgX18vIFwgViAgViAvIHwgKF8pIHx8IHwgICB8ICAgPApcX19fX18vIFxfXyxffHxffCAgIHwgLl9fLyAgXF9fX18vIHxffHwgLl9fLyB8X3wgfF98IFxfX198fF98ICAgIFwvICAgICB8X3wgICAgXF9fLF98fF98IHxffCB8X3wgXF9fX3wgIFxfL1xfLyAgIFxfX18vIHxffCAgIHxffFxfXAogICAgICAgICAgICAgICAgICAgIHxffCAgICAgICAgICAgICAgIHxffAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZ7dmVyc2lvbn0gYnkgVHJ1b2MgUGhhbiAoQHRydW9jcGhhbikKCg==").decode().format(version=EXTENSION_VERSION))
+print(Utils.base64Decode("CiAgIF9fXyAgICAgICAgICAgICAgICAgICAgICAgICBfX18gIF8gICAgICAgICBfICAgICAgICAgICAgICAgICAgICAgX19fICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIF8KICAvIF9fXCBfICAgXyAgXyBfXyAgXyBfXyAgICAgLyBfX1woXykgXyBfXyAgfCB8X18gICAgX19fICBfIF9fICAgIC8gX19cIF8gX18gICBfXyBfICBfIF9fIF9fXyAgICBfX18gX18gICAgICBfXyAgX19fICAgXyBfXyB8IHwgX18KIC9fX1wvL3wgfCB8IHx8ICdfX3x8ICdfIFwgICAvIC8gICB8IHx8ICdfIFwgfCAnXyBcICAvIF8gXHwgJ19ffCAgLyBfXCAgfCAnX198IC8gX2AgfHwgJ18gYCBfIFwgIC8gXyBcXCBcIC9cIC8gLyAvIF8gXCB8ICdfX3x8IHwvIC8KLyBcLyAgXHwgfF98IHx8IHwgICB8IHxfKSB8IC8gL19fXyB8IHx8IHxfKSB8fCB8IHwgfHwgIF9fL3wgfCAgICAvIC8gICAgfCB8ICAgfCAoX3wgfHwgfCB8IHwgfCB8fCAgX18vIFwgViAgViAvIHwgKF8pIHx8IHwgICB8ICAgPApcX19fX18vIFxfXyxffHxffCAgIHwgLl9fLyAgXF9fX18vIHxffHwgLl9fLyB8X3wgfF98IFxfX198fF98ICAgIFwvICAgICB8X3wgICAgXF9fLF98fF98IHxffCB8X3wgXF9fX3wgIFxfL1xfLyAgIFxfX18vIHxffCAgIHxffFxfXAogICAgICAgICAgICAgICAgICAgIHxffCAgICAgICAgICAgICAgIHxffAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZ7dmVyc2lvbn0gYnkgVHJ1b2MgUGhhbiAoQHRydW9jcGhhbikKCg==").format(version=EXTENSION_VERSION))
 
 
 
-ConfigInfo = jdks.load(CONF_PATH, _isDebug_=True).get("config")["value"]
+with open(CONF_PATH, "rb") as Jfile: BCFconf_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
+JDKSObject_BCFconf = jdks.load(CONF_PATH, _isDebug_=True)
+
+ConfigInfo = JDKSObject_BCFconf.get("config")["value"]
 if type(ConfigInfo["extension_name"]) in [unicode, str] and len(ConfigInfo["extension_name"]) > 0: EXTENSION_NAME = ConfigInfo["extension_name"]
 if type(ConfigInfo["extension_version"]) in [unicode, str] and len(ConfigInfo["extension_version"]) > 0: EXTENSION_VERSION = ConfigInfo["extension_version"]
 if type(ConfigInfo["serverPublicKeys"]) == list and len(ConfigInfo["serverPublicKeys"]) > 0: serverPublicKeys = ConfigInfo["serverPublicKeys"]
@@ -131,6 +123,9 @@ if type(ConfigInfo["clientIVs"]) == list and len(ConfigInfo["clientIVs"]) > 0: c
 if type(ConfigInfo["clientSalts"]) == list and len(ConfigInfo["clientSalts"]) > 0: clientSalts = ConfigInfo["clientSalts"]
 if type(ConfigInfo["clientPasswords"]) == list and len(ConfigInfo["clientPasswords"]) > 0: clientPasswords = ConfigInfo["clientPasswords"]
 
+ProcessMessage_Request = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Request"]
+ProcessMessage_Response = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Response"]
+CipherTab = JDKSObject_BCFconf.get("CipherTab")["value"]
 
 
 class MenuBar(Runnable, MenuListener, IExtensionStateListener):
@@ -149,45 +144,92 @@ class MenuBar(Runnable, MenuListener, IExtensionStateListener):
 		self.menu_extender_decRes_item = None
 		self.menu_all_encReq_item = None
 		self.menu_all_decRes_item = None
+		self.menu_AutoRefesh_BCFconf_item = None
+
+	class AllToolsListener(ActionListener):
+		def __init__(self, checkboxes):
+			self.checkboxes = checkboxes
+	   
+		def actionPerformed(self, event):
+			all_checkbox = event.getSource()
+			is_selected = all_checkbox.isSelected()
+			for checkbox in self.checkboxes:
+				checkbox.setSelected(is_selected)
+			self.repaint_burp_jmenu_bar()
+ 
+		def repaint_burp_jmenu_bar(self):
+			burp_jframe = self.get_burp_jframe()
+			burp_jframe.repaint()
+ 
+		def get_burp_jframe(self):
+			frames = Frame.getFrames()
+			for frame in frames:
+				if frame.isVisible() and frame.getTitle().startswith("Burp Suite"):
+					return frame
+			return None
+ 
+	class IndividualToolListener(ActionListener):
+		def __init__(self, all_checkbox, checkboxes):
+			self.all_checkbox = all_checkbox
+			self.checkboxes = checkboxes
+	   
+		def actionPerformed(self, event):
+			all_selected = all(checkbox.isSelected() for checkbox in self.checkboxes)
+			self.all_checkbox.setSelected(all_selected)
+			self.repaint_burp_jmenu_bar()
+ 
+		def repaint_burp_jmenu_bar(self):
+			burp_jframe = self.get_burp_jframe()
+			burp_jframe.repaint()
+ 
+		def get_burp_jframe(self):
+			frames = Frame.getFrames()
+			for frame in frames:
+				if frame.isVisible() and frame.getTitle().startswith("Burp Suite"):
+					return frame
+			return None
 
 	def run(self):
 		self.menu_button = JMenu(EXTENSION_NAME+" v"+EXTENSION_VERSION)
 
 		self.menu_encReq = JMenu("Encrypt Request")
 		self.menu_decRes = JMenu("Decrypt Response")
+		self.menu_AutoRefesh_BCFconf_item = JCheckBoxMenuItem("Auto Refresh BCFconf")
+		self.menu_AutoRefesh_BCFconf_item.setSelected(True)
 
+		self.menu_all_encReq_item = JCheckBoxMenuItem("All Tools")
 		self.menu_scanner_encReq_item = JCheckBoxMenuItem("Scanner")
 		self.menu_proxy_encReq_item = JCheckBoxMenuItem("Proxy")
 		self.menu_intruder_encReq_item = JCheckBoxMenuItem("Intruder")
 		self.menu_repeater_encReq_item = JCheckBoxMenuItem("Repeater")
 		self.menu_extender_encReq_item = JCheckBoxMenuItem("Extender")
-		self.menu_all_encReq_item = JCheckBoxMenuItem("All Tools")
 		self.menu_all_encReq_item.setSelected(True)
 
+		self.menu_all_decRes_item = JCheckBoxMenuItem("All Tools")
 		self.menu_scanner_decRes_item = JCheckBoxMenuItem("Scanner")
 		self.menu_proxy_decRes_item = JCheckBoxMenuItem("Proxy")
 		self.menu_intruder_decRes_item = JCheckBoxMenuItem("Intruder")
 		self.menu_repeater_decRes_item = JCheckBoxMenuItem("Repeater")
 		self.menu_extender_decRes_item = JCheckBoxMenuItem("Extender")
-		self.menu_all_decRes_item = JCheckBoxMenuItem("All Tools")
 		self.menu_all_decRes_item.setSelected(True)
 
+		self.menu_encReq.add(self.menu_all_encReq_item)
 		self.menu_encReq.add(self.menu_scanner_encReq_item)
 		self.menu_encReq.add(self.menu_proxy_encReq_item)
 		self.menu_encReq.add(self.menu_intruder_encReq_item)
 		self.menu_encReq.add(self.menu_repeater_encReq_item)
 		self.menu_encReq.add(self.menu_extender_encReq_item)
-		self.menu_encReq.add(self.menu_all_encReq_item)
 
+		self.menu_decRes.add(self.menu_all_decRes_item)
 		self.menu_decRes.add(self.menu_scanner_decRes_item)
 		self.menu_decRes.add(self.menu_proxy_decRes_item)
 		self.menu_decRes.add(self.menu_intruder_decRes_item)
 		self.menu_decRes.add(self.menu_repeater_decRes_item)
 		self.menu_decRes.add(self.menu_extender_decRes_item)
-		self.menu_decRes.add(self.menu_all_decRes_item)
 
 		self.menu_button.add(self.menu_encReq)
 		self.menu_button.add(self.menu_decRes)
+		self.menu_button.add(self.menu_AutoRefesh_BCFconf_item)
 
 		UIManager.put("CheckBoxMenuItem.doNotCloseOnMouseClick", True)
 
@@ -201,6 +243,34 @@ class MenuBar(Runnable, MenuListener, IExtensionStateListener):
 		burp_jmenu_bar = get_burp_jframe().getJMenuBar()
 		burp_jmenu_bar.add(self.menu_button)
 		burp_jmenu_bar.repaint()
+
+		encReq_items = [
+			self.menu_scanner_encReq_item,
+			self.menu_proxy_encReq_item,
+			self.menu_intruder_encReq_item,
+			self.menu_repeater_encReq_item,
+			self.menu_extender_encReq_item
+		]
+ 
+		decRes_items = [
+			self.menu_scanner_decRes_item,
+			self.menu_proxy_decRes_item,
+			self.menu_intruder_decRes_item,
+			self.menu_repeater_decRes_item,
+			self.menu_extender_decRes_item
+		]
+
+		for tool in encReq_items: tool.setSelected(True)
+ 		for tool in decRes_items: tool.setSelected(True)
+ 
+		self.menu_all_encReq_item.addActionListener(MenuBar.AllToolsListener(encReq_items))
+		self.menu_all_decRes_item.addActionListener(MenuBar.AllToolsListener(decRes_items))
+ 
+		for item in encReq_items:
+			item.addActionListener(MenuBar.IndividualToolListener(self.menu_all_encReq_item, encReq_items))
+	   
+		for item in decRes_items:
+			item.addActionListener(MenuBar.IndividualToolListener(self.menu_all_decRes_item, decRes_items))
 
 	def menuSelected(self, e):
 		pass
@@ -245,9 +315,10 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IHttpListener):
 		callbacks.registerHttpListener(self)
 
 	def processHttpMessage(self, toolFlag, messageIsRequest, messageInfo):
+		global BCFconf_hash, ProcessMessage_Request, ProcessMessage_Response, CipherTab, serverPublicKeys, serverPrivateKeys, serverSecretKeys, serverIVs, serverSalts, serverPasswords, clientPublicKeys, clientPrivateKeys, clientSecretKeys, clientIVs, clientSalts, clientPasswords
+
 		target = messageInfo.getHttpService().getHost() + ":" + str(messageInfo.getHttpService().getPort())
 		url = str(messageInfo.getHttpService().getProtocol()) + "//" + target + self._helpers.analyzeRequest(messageInfo.getRequest()).getHeaders()[0].split(" ")[1]
-		ExtenderHelpers = self._helpers
 
 		if messageIsRequest:
 			if (self.config_menu.menu_all_encReq_item.getState() and toolFlag in [IBurpExtenderCallbacks.TOOL_SCANNER, IBurpExtenderCallbacks.TOOL_PROXY, IBurpExtenderCallbacks.TOOL_INTRUDER, IBurpExtenderCallbacks.TOOL_REPEATER, IBurpExtenderCallbacks.TOOL_EXTENDER]) \
@@ -259,48 +330,77 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IHttpListener):
 				try:
 					oriRequest = messageInfo.getRequest()
 
-					newRequest = ExtenderHelpers.bytesToString(oriRequest)
+					newRequest = self._helpers.bytesToString(oriRequest)
 					for k,v in SpecialCharacters.items():
 						newRequest = newRequest.replace(k,v)
 
 					RequestParser = TP_HTTP_REQUEST_PARSER(newRequest, ordered_dict=True)
 
-					ProcessMessage = jdks.load(CONF_PATH, _isDebug_=True).get("ProcessMessage")["value"]
-					Request = ProcessMessage["Request"]
+					if self.config_menu.menu_AutoRefesh_BCFconf_item.getState():
+						with open(CONF_PATH, "rb") as Jfile:
+							md5_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
+							if BCFconf_hash != md5_hash:
+								BCFconf_hash = md5_hash
 
-					for i in range(len(Request)):
+								JDKSObject_BCFconf = jdks.load(CONF_PATH, _isDebug_=True)
+								ConfigInfo = JDKSObject_BCFconf.get("config")["value"]
+								if type(ConfigInfo["serverPublicKeys"]) == list and len(ConfigInfo["serverPublicKeys"]) > 0: serverPublicKeys = ConfigInfo["serverPublicKeys"]
+								if type(ConfigInfo["serverPrivateKeys"]) == list and len(ConfigInfo["serverPrivateKeys"]) > 0: serverPrivateKeys = ConfigInfo["serverPrivateKeys"]
+								if type(ConfigInfo["serverSecretKeys"]) == list and len(ConfigInfo["serverSecretKeys"]) > 0: serverSecretKeys = ConfigInfo["serverSecretKeys"]
+								if type(ConfigInfo["serverIVs"]) == list and len(ConfigInfo["serverIVs"]) > 0: serverIVs = ConfigInfo["serverIVs"]
+								if type(ConfigInfo["serverSalts"]) == list and len(ConfigInfo["serverSalts"]) > 0: serverSalts = ConfigInfo["serverSalts"]
+								if type(ConfigInfo["serverPasswords"]) == list and len(ConfigInfo["serverPasswords"]) > 0: serverPasswords = ConfigInfo["serverPasswords"]
+								if type(ConfigInfo["clientPublicKeys"]) == list and len(ConfigInfo["clientPublicKeys"]) > 0: clientPublicKeys = ConfigInfo["clientPublicKeys"]
+								if type(ConfigInfo["clientPrivateKeys"]) == list and len(ConfigInfo["clientPrivateKeys"]) > 0: clientPrivateKeys = ConfigInfo["clientPrivateKeys"]
+								if type(ConfigInfo["clientSecretKeys"]) == list and len(ConfigInfo["clientSecretKeys"])> 0: clientSecretKeys = ConfigInfo["clientSecretKeys"]
+								if type(ConfigInfo["clientIVs"]) == list and len(ConfigInfo["clientIVs"]) > 0: clientIVs = ConfigInfo["clientIVs"]
+								if type(ConfigInfo["clientSalts"]) == list and len(ConfigInfo["clientSalts"]) > 0: clientSalts = ConfigInfo["clientSalts"]
+								if type(ConfigInfo["clientPasswords"]) == list and len(ConfigInfo["clientPasswords"]) > 0: clientPasswords = ConfigInfo["clientPasswords"]
+
+								ProcessMessage_Request = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Request"]
+								ProcessMessage_Response = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Response"]
+								CipherTab = JDKSObject_BCFconf.get("CipherTab")["value"]
+
+
+					for i in range(len(ProcessMessage_Request)):
 						match = True
-						for pattern in Request[i]["PATTERN"]:
+						for pattern in ProcessMessage_Request[i]["PATTERN"]:
 							if not re.search(pattern, newRequest):
 								match = False
 								break
 
-						if not re.search(Request[i]["TARGET"], target): match = False
+						if not re.search(ProcessMessage_Request[i]["TARGET"], target): match = False
 
 						if match:
 							print("-"*128)
 							print("["+datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] Request (processHttpMessage): "+url)
 
 							O = list()
-							for j in range(len(Request[i]["DATA"])):
+							for j in range(len(ProcessMessage_Request[i]["DATA"])):
 								O.append("")
+								ProcessMessage_Request_CONDITION = ProcessMessage_Request[i]["DATA"][j]["CONDITION"]
+								if len(ProcessMessage_Request_CONDITION) == 0 or eval(ProcessMessage_Request_CONDITION):
+									for ProcessMessage_Request_OUTPUT in ProcessMessage_Request[i]["DATA"][j]["OUTPUT"]:
+										if type(ProcessMessage_Request_OUTPUT["code"]) in [str, unicode] and len(ProcessMessage_Request_OUTPUT["code"]) > 0:
+											LOOPDATA = [""]
+											if type(ProcessMessage_Request_OUTPUT["LOOPDATA"]) in [str, unicode] and len(ProcessMessage_Request_OUTPUT["LOOPDATA"]) > 0:
+												LOOPDATA = eval(ProcessMessage_Request_OUTPUT["LOOPDATA"])
 
-								for k in range(len(Request[i]["DATA"][j]["OUTPUT"])):
-									if type(Request[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(Request[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-										if Request[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-											exec Request[i]["DATA"][j]["OUTPUT"][k]["code"]
-										else:
-											O[j] = eval(Request[i]["DATA"][j]["OUTPUT"][k]["code"])
+											for LOOPVALUE in LOOPDATA:
+												if ProcessMessage_Request_OUTPUT["exec_func"]:
+													exec ProcessMessage_Request_OUTPUT["code"]
+												else:
+													O[j] = eval(ProcessMessage_Request_OUTPUT["code"])
+
 								print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 							break
 
 					RequestParser.request_headers.delete("X-BCF-SESSION", case_insensitive=True)
 					RequestParser.request_headers.delete("X-BCF-ENCRYPTED", case_insensitive=True)
 					RequestParser.request_headers.delete("X-BCF-ENABLED", case_insensitive=True)
-
 					newRequest = RequestParser.unparse(update_content_length=True)
 
-					newRequest = ExtenderHelpers.stringToBytes(newRequest)
+					newRequest = self._helpers.stringToBytes(newRequest)
 					messageInfo.setRequest(newRequest)
 				except Exception as e:
 					print("processHttpMessage - Request:", e)
@@ -315,38 +415,68 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IHttpListener):
 				try:
 					oriResponse = messageInfo.getResponse()
 
-					newResponse = ExtenderHelpers.bytesToString(oriResponse)
+					newResponse = self._helpers.bytesToString(oriResponse)
 					for k,v in SpecialCharacters.items():
 						newResponse = newResponse.replace(k,v)
 
 					ResponseParser = TP_HTTP_RESPONSE_PARSER(newResponse, ordered_dict=True)
 
-					ProcessMessage = jdks.load(CONF_PATH, _isDebug_=True).get("ProcessMessage")["value"]
-					Response = ProcessMessage["Response"]
+					if self.config_menu.menu_AutoRefesh_BCFconf_item.getState():
+						with open(CONF_PATH, "rb") as Jfile:
+							md5_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
+							if BCFconf_hash != md5_hash:
+								BCFconf_hash = md5_hash
 
-					for i in range(len(Response)):
+								JDKSObject_BCFconf = jdks.load(CONF_PATH, _isDebug_=True)
+								ConfigInfo = JDKSObject_BCFconf.get("config")["value"]
+								if type(ConfigInfo["serverPublicKeys"]) == list and len(ConfigInfo["serverPublicKeys"]) > 0: serverPublicKeys = ConfigInfo["serverPublicKeys"]
+								if type(ConfigInfo["serverPrivateKeys"]) == list and len(ConfigInfo["serverPrivateKeys"]) > 0: serverPrivateKeys = ConfigInfo["serverPrivateKeys"]
+								if type(ConfigInfo["serverSecretKeys"]) == list and len(ConfigInfo["serverSecretKeys"]) > 0: serverSecretKeys = ConfigInfo["serverSecretKeys"]
+								if type(ConfigInfo["serverIVs"]) == list and len(ConfigInfo["serverIVs"]) > 0: serverIVs = ConfigInfo["serverIVs"]
+								if type(ConfigInfo["serverSalts"]) == list and len(ConfigInfo["serverSalts"]) > 0: serverSalts = ConfigInfo["serverSalts"]
+								if type(ConfigInfo["serverPasswords"]) == list and len(ConfigInfo["serverPasswords"]) > 0: serverPasswords = ConfigInfo["serverPasswords"]
+								if type(ConfigInfo["clientPublicKeys"]) == list and len(ConfigInfo["clientPublicKeys"]) > 0: clientPublicKeys = ConfigInfo["clientPublicKeys"]
+								if type(ConfigInfo["clientPrivateKeys"]) == list and len(ConfigInfo["clientPrivateKeys"]) > 0: clientPrivateKeys = ConfigInfo["clientPrivateKeys"]
+								if type(ConfigInfo["clientSecretKeys"]) == list and len(ConfigInfo["clientSecretKeys"])> 0: clientSecretKeys = ConfigInfo["clientSecretKeys"]
+								if type(ConfigInfo["clientIVs"]) == list and len(ConfigInfo["clientIVs"]) > 0: clientIVs = ConfigInfo["clientIVs"]
+								if type(ConfigInfo["clientSalts"]) == list and len(ConfigInfo["clientSalts"]) > 0: clientSalts = ConfigInfo["clientSalts"]
+								if type(ConfigInfo["clientPasswords"]) == list and len(ConfigInfo["clientPasswords"]) > 0: clientPasswords = ConfigInfo["clientPasswords"]
+
+								ProcessMessage_Request = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Request"]
+								ProcessMessage_Response = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Response"]
+								CipherTab = JDKSObject_BCFconf.get("CipherTab")["value"]
+
+
+					for i in range(len(ProcessMessage_Response)):
 						match = True
-						for pattern in Response[i]["PATTERN"]:
+						for pattern in ProcessMessage_Response[i]["PATTERN"]:
 							if not re.search(pattern, newResponse):
 								match = False
 								break
 
-						if not re.search(Response[i]["TARGET"], target): match = False
+						if not re.search(ProcessMessage_Response[i]["TARGET"], target): match = False
 
 						if match:
 							print("-"*128)
 							print("["+datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] Response (processHttpMessage): "+url)
 
 							O = list()
-							for j in range(len(Response[i]["DATA"])):
+							for j in range(len(ProcessMessage_Response[i]["DATA"])):
 								O.append("")
+								ProcessMessage_Response_CONDITION = ProcessMessage_Response[i]["DATA"][j]["CONDITION"]
+								if len(ProcessMessage_Response_CONDITION) == 0 or eval(ProcessMessage_Response_CONDITION):
+									for ProcessMessage_Response_OUTPUT in ProcessMessage_Response[i]["DATA"][j]["OUTPUT"]:
+										if type(ProcessMessage_Response_OUTPUT["code"]) in [str, unicode] and len(ProcessMessage_Response_OUTPUT["code"]) > 0:
+											LOOPDATA = [""]
+											if type(ProcessMessage_Response_OUTPUT["LOOPDATA"]) in [str, unicode] and len(ProcessMessage_Response_OUTPUT["LOOPDATA"]) > 0:
+												LOOPDATA = eval(ProcessMessage_Response_OUTPUT["LOOPDATA"])
 
-								for k in range(len(Response[i]["DATA"][j]["OUTPUT"])):
-									if type(Response[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(Response[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-										if Response[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-											exec Response[i]["DATA"][j]["OUTPUT"][k]["code"]
-										else:
-											O[j] = eval(Response[i]["DATA"][j]["OUTPUT"][k]["code"])
+											for LOOPVALUE in LOOPDATA:
+												if ProcessMessage_Response_OUTPUT["exec_func"]:
+													exec ProcessMessage_Response_OUTPUT["code"]
+												else:
+													O[j] = eval(ProcessMessage_Response_OUTPUT["code"])
+
 								print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 							break
 
@@ -354,7 +484,7 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IHttpListener):
 					for k,v in SpecialCharacters.items():
 						newResponse = newResponse.replace(v,k)
 
-					newResponse = ExtenderHelpers.stringToBytes(newResponse)
+					newResponse = self._helpers.stringToBytes(newResponse)
 					messageInfo.setResponse(newResponse)
 				except Exception as e:
 					print("processHttpMessage - Response:", e)
@@ -370,8 +500,6 @@ class CipherMessageEditorTab(IMessageEditorTab):
 		self._txtInput = extender._callbacks.createMessageEditor(controller, editable)
 		self._extender = extender
 		self.editable = editable
-		self.CipherTab = jdks.load(CONF_PATH, _isDebug_=True).get("CipherTab")["value"]
-		with open(CONF_PATH, "rb") as Jfile: self.BCFconf_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
 
 
 	def getUiComponent(self):
@@ -383,9 +511,10 @@ class CipherMessageEditorTab(IMessageEditorTab):
 
 
 	def isEnabled(self, content, isRequest):
+		global TARGET, BCFconf_hash, ProcessMessage_Request, ProcessMessage_Response, CipherTab, serverPublicKeys, serverPrivateKeys, serverSecretKeys, serverIVs, serverSalts, serverPasswords, clientPublicKeys, clientPrivateKeys, clientSecretKeys, clientIVs, clientSalts, clientPasswords
+
 		match = False
 		if content:
-			global TARGET
 			analyzeTraffic = self._extender._helpers.analyzeRequest(content)
 
 			for header in analyzeTraffic.getHeaders()[1:]:
@@ -396,17 +525,33 @@ class CipherMessageEditorTab(IMessageEditorTab):
 					TARGET = (TARGET if len(TARGET.split(":", 1)) == 2 else TARGET+":443")
 
 
-			with open(CONF_PATH, "rb") as Jfile:
-				try:
-					BCFconf_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
-					if self.BCFconf_hash != BCFconf_hash:
-						self.CipherTab = jdks.load(CONF_PATH, _isDebug_=True).get("CipherTab")["value"]
-						self.BCFconf_hash = BCFconf_hash
-				except Exception as e:
-					pass
+			if self._extender.config_menu.menu_AutoRefesh_BCFconf_item.getState():
+				with open(CONF_PATH, "rb") as Jfile:
+					md5_hash = MD5().hexdigest(Utils.base64Encode(Jfile.read()))
+					if BCFconf_hash != md5_hash:
+						BCFconf_hash = md5_hash
+
+						JDKSObject_BCFconf = jdks.load(CONF_PATH, _isDebug_=True)
+						ConfigInfo = JDKSObject_BCFconf.get("config")["value"]
+						if type(ConfigInfo["serverPublicKeys"]) == list and len(ConfigInfo["serverPublicKeys"]) > 0: serverPublicKeys = ConfigInfo["serverPublicKeys"]
+						if type(ConfigInfo["serverPrivateKeys"]) == list and len(ConfigInfo["serverPrivateKeys"]) > 0: serverPrivateKeys = ConfigInfo["serverPrivateKeys"]
+						if type(ConfigInfo["serverSecretKeys"]) == list and len(ConfigInfo["serverSecretKeys"]) > 0: serverSecretKeys = ConfigInfo["serverSecretKeys"]
+						if type(ConfigInfo["serverIVs"]) == list and len(ConfigInfo["serverIVs"]) > 0: serverIVs = ConfigInfo["serverIVs"]
+						if type(ConfigInfo["serverSalts"]) == list and len(ConfigInfo["serverSalts"]) > 0: serverSalts = ConfigInfo["serverSalts"]
+						if type(ConfigInfo["serverPasswords"]) == list and len(ConfigInfo["serverPasswords"]) > 0: serverPasswords = ConfigInfo["serverPasswords"]
+						if type(ConfigInfo["clientPublicKeys"]) == list and len(ConfigInfo["clientPublicKeys"]) > 0: clientPublicKeys = ConfigInfo["clientPublicKeys"]
+						if type(ConfigInfo["clientPrivateKeys"]) == list and len(ConfigInfo["clientPrivateKeys"]) > 0: clientPrivateKeys = ConfigInfo["clientPrivateKeys"]
+						if type(ConfigInfo["clientSecretKeys"]) == list and len(ConfigInfo["clientSecretKeys"])> 0: clientSecretKeys = ConfigInfo["clientSecretKeys"]
+						if type(ConfigInfo["clientIVs"]) == list and len(ConfigInfo["clientIVs"]) > 0: clientIVs = ConfigInfo["clientIVs"]
+						if type(ConfigInfo["clientSalts"]) == list and len(ConfigInfo["clientSalts"]) > 0: clientSalts = ConfigInfo["clientSalts"]
+						if type(ConfigInfo["clientPasswords"]) == list and len(ConfigInfo["clientPasswords"]) > 0: clientPasswords = ConfigInfo["clientPasswords"]
+
+						ProcessMessage_Request = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Request"]
+						ProcessMessage_Response = JDKSObject_BCFconf.get("ProcessMessage")["value"]["Response"]
+						CipherTab = JDKSObject_BCFconf.get("CipherTab")["value"]
 
 			if isRequest:
-				DecryptRequest = self.CipherTab["DecryptRequest"]
+				DecryptRequest = CipherTab["DecryptRequest"]
 
 				for i in range(len(DecryptRequest)):
 					match = True
@@ -418,7 +563,7 @@ class CipherMessageEditorTab(IMessageEditorTab):
 					if not re.search(DecryptRequest[i]["TARGET"], TARGET): match = False
 				return match
 			else:
-				DecryptResponse = self.CipherTab["DecryptResponse"]
+				DecryptResponse = CipherTab["DecryptResponse"]
 
 				for i in range(len(DecryptResponse)):
 					match = True
@@ -434,19 +579,19 @@ class CipherMessageEditorTab(IMessageEditorTab):
 
 
 	def setMessage(self, content, isRequest):
+		self._txtInput.setMessage("", isRequest)
 		if content:
 			self._isRequest = isRequest
-			ExtenderHelpers = self._extender._helpers
 
 			if isRequest:
 				try:
-					newContent = ExtenderHelpers.bytesToString(content)
+					newContent = self._extender._helpers.bytesToString(content)
 					for k,v in SpecialCharacters.items():
 						newContent = newContent.replace(k,v)
 
 					RequestParser = TP_HTTP_REQUEST_PARSER(newContent, ordered_dict=True)
 
-					DecryptRequest = self.CipherTab["DecryptRequest"]
+					DecryptRequest = CipherTab["DecryptRequest"]
 
 					for i in range(len(DecryptRequest)):
 						match = True
@@ -464,13 +609,20 @@ class CipherMessageEditorTab(IMessageEditorTab):
 							O = list()
 							for j in range(len(DecryptRequest[i]["DATA"])):
 								O.append("")
+								DecryptRequest_CONDITION = DecryptRequest[i]["DATA"][j]["CONDITION"]
+								if len(DecryptRequest_CONDITION) == 0 or eval(DecryptRequest_CONDITION):
+									for DecryptRequest_OUTPUT in DecryptRequest[i]["DATA"][j]["OUTPUT"]:
+										if type(DecryptRequest_OUTPUT["code"]) in [str, unicode] and len(DecryptRequest_OUTPUT["code"]) > 0:
+											LOOPDATA = [""]
+											if type(DecryptRequest_OUTPUT["LOOPDATA"]) in [str, unicode] and len(DecryptRequest_OUTPUT["LOOPDATA"]) > 0:
+												LOOPDATA = eval(DecryptRequest_OUTPUT["LOOPDATA"])
 
-								for k in range(len(DecryptRequest[i]["DATA"][j]["OUTPUT"])):
-									if type(DecryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(DecryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-										if DecryptRequest[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-											exec DecryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]
-										else:
-											O[j] = eval(DecryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"])
+											for LOOPVALUE in LOOPDATA:
+												if DecryptRequest_OUTPUT["exec_func"]:
+													exec DecryptRequest_OUTPUT["code"]
+												else:
+													O[j] = eval(DecryptRequest_OUTPUT["code"])
+
 								print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 							break
 
@@ -479,20 +631,19 @@ class CipherMessageEditorTab(IMessageEditorTab):
 					for k, v in SpecialCharacters.items():
 						newContent = newContent.replace(v,k)
 
-					newContent = ExtenderHelpers.stringToBytes(newContent)
+					newContent = self._extender._helpers.stringToBytes(newContent)
 					self._txtInput.setMessage(newContent, isRequest)
 				except Exception as e:
 					print("CipherMessageEditorTab - DecryptRequest:", e)
-					self._txtInput.setMessage(content, isRequest)
 			else:
 				try:
-					newContent = ExtenderHelpers.bytesToString(content)
+					newContent = self._extender._helpers.bytesToString(content)
 					for k,v in SpecialCharacters.items():
 						newContent = newContent.replace(k,v)
 
 					ResponseParser = TP_HTTP_RESPONSE_PARSER(newContent, ordered_dict=True)
 
-					DecryptResponse = self.CipherTab["DecryptResponse"]
+					DecryptResponse = CipherTab["DecryptResponse"]
 
 					for i in range(len(DecryptResponse)):
 						match = True
@@ -510,13 +661,20 @@ class CipherMessageEditorTab(IMessageEditorTab):
 							O = list()
 							for j in range(len(DecryptResponse[i]["DATA"])):
 								O.append("")
+								DecryptResponse_CONDITION = DecryptResponse[i]["DATA"][j]["CONDITION"]
+								if len(DecryptResponse_CONDITION) == 0 or eval(DecryptResponse_CONDITION):
+									for DecryptResponse_OUTPUT in DecryptResponse[i]["DATA"][j]["OUTPUT"]:
+										if type(DecryptResponse_OUTPUT["code"]) in [str, unicode] and len(DecryptResponse_OUTPUT["code"]) > 0:
+											LOOPDATA = [""]
+											if type(DecryptResponse_OUTPUT["LOOPDATA"]) in [str, unicode] and len(DecryptResponse_OUTPUT["LOOPDATA"]) > 0:
+												LOOPDATA = eval(DecryptResponse_OUTPUT["LOOPDATA"])
 
-								for k in range(len(DecryptResponse[i]["DATA"][j]["OUTPUT"])):
-									if type(DecryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(DecryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-										if DecryptResponse[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-											exec DecryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]
-										else:
-											O[j] = eval(DecryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"])
+											for LOOPVALUE in LOOPDATA:
+												if DecryptResponse_OUTPUT["exec_func"]:
+													exec DecryptResponse_OUTPUT["code"]
+												else:
+													O[j] = eval(DecryptResponse_OUTPUT["code"])
+
 								print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 							break
 
@@ -525,26 +683,23 @@ class CipherMessageEditorTab(IMessageEditorTab):
 					for k, v in SpecialCharacters.items():
 						newContent = newContent.replace(v,k)
 
-					newContent = ExtenderHelpers.stringToBytes(newContent)
+					newContent = self._extender._helpers.stringToBytes(newContent)
 					self._txtInput.setMessage(newContent, isRequest)
 				except Exception as e:
 					print("CipherMessageEditorTab - DecryptResponse:", e)
-					self._txtInput.setMessage(content, isRequest)
 
 
 	def getMessage(self):
 		content = self._txtInput.getMessage()
 		if self.editable and content:
-			ExtenderHelpers = self._extender._helpers
-
 			if self._isRequest:
-				newContent = ExtenderHelpers.bytesToString(content)
+				newContent = self._extender._helpers.bytesToString(content)
 				for k,v in SpecialCharacters.items():
 					newContent = newContent.replace(k,v)
 
 				RequestParser = TP_HTTP_REQUEST_PARSER(newContent, ordered_dict=True)
 
-				EncryptRequest = self.CipherTab["EncryptRequest"]
+				EncryptRequest = CipherTab["EncryptRequest"]
 
 				for i in range(len(EncryptRequest)):
 					match = True
@@ -562,13 +717,20 @@ class CipherMessageEditorTab(IMessageEditorTab):
 						O = list()
 						for j in range(len(EncryptRequest[i]["DATA"])):
 							O.append("")
+							EncryptRequest_CONDITION = EncryptRequest[i]["DATA"][j]["CONDITION"]
+							if len(EncryptRequest_CONDITION) == 0 or eval(EncryptRequest_CONDITION):
+								for EncryptRequest_OUTPUT in EncryptRequest[i]["DATA"][j]["OUTPUT"]:
+									if type(EncryptRequest_OUTPUT["code"]) in [str, unicode] and len(EncryptRequest_OUTPUT["code"]) > 0:
+										LOOPDATA = [""]
+										if type(EncryptRequest_OUTPUT["LOOPDATA"]) in [str, unicode] and len(EncryptRequest_OUTPUT["LOOPDATA"]) > 0:
+											LOOPDATA = eval(EncryptRequest_OUTPUT["LOOPDATA"])
 
-							for k in range(len(EncryptRequest[i]["DATA"][j]["OUTPUT"])):
-								if type(EncryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(EncryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-									if EncryptRequest[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-										exec EncryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"]
-									else:
-										O[j] = eval(EncryptRequest[i]["DATA"][j]["OUTPUT"][k]["code"])
+										for LOOPVALUE in LOOPDATA:
+											if EncryptRequest_OUTPUT["exec_func"]:
+												exec EncryptRequest_OUTPUT["code"]
+											else:
+												O[j] = eval(EncryptRequest_OUTPUT["code"])
+
 							print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 						break
 
@@ -577,16 +739,16 @@ class CipherMessageEditorTab(IMessageEditorTab):
 				for k,v in SpecialCharacters.items():
 					newContent = newContent.replace(v,k)
 
-				newContent = ExtenderHelpers.stringToBytes(newContent)
+				newContent = self._extender._helpers.stringToBytes(newContent)
 				return newContent
 			else:
-				newContent = ExtenderHelpers.bytesToString(content)
+				newContent = self._extender._helpers.bytesToString(content)
 				for k,v in SpecialCharacters.items():
 					newContent = newContent.replace(k,v)
 
 				ResponseParser = TP_HTTP_RESPONSE_PARSER(newContent, ordered_dict=True)
 
-				EncryptResponse = self.CipherTab["EncryptResponse"]
+				EncryptResponse = CipherTab["EncryptResponse"]
 
 				for i in range(len(EncryptResponse)):
 					match = True
@@ -604,13 +766,20 @@ class CipherMessageEditorTab(IMessageEditorTab):
 						O = list()
 						for j in range(len(EncryptResponse[i]["DATA"])):
 							O.append("")
+							EncryptResponse_CONDITION = EncryptResponse[i]["DATA"][j]["CONDITION"]
+							if len(EncryptResponse_CONDITION) == 0 or eval(EncryptResponse_CONDITION):
+								for EncryptResponse_OUTPUT in EncryptResponse[i]["DATA"][j]["OUTPUT"]:
+									if type(EncryptResponse_OUTPUT["code"]) in [str, unicode] and len(EncryptResponse_OUTPUT["code"]) > 0:
+										LOOPDATA = [""]
+										if type(EncryptResponse_OUTPUT["LOOPDATA"]) in [str, unicode] and len(EncryptResponse_OUTPUT["LOOPDATA"]) > 0:
+											LOOPDATA = eval(EncryptResponse_OUTPUT["LOOPDATA"])
 
-							for k in range(len(EncryptResponse[i]["DATA"][j]["OUTPUT"])):
-								if type(EncryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]) in [str, unicode] and len(EncryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]) > 0:
-									if EncryptResponse[i]["DATA"][j]["OUTPUT"][k]["exec_func"]:
-										exec EncryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"]
-									else:
-										O[j] = eval(EncryptResponse[i]["DATA"][j]["OUTPUT"][k]["code"])
+										for LOOPVALUE in LOOPDATA:
+											if EncryptResponse_OUTPUT["exec_func"]:
+												exec EncryptResponse_OUTPUT["code"]
+											else:
+												O[j] = eval(EncryptResponse_OUTPUT["code"])
+
 							print("- O["+str(j)+"]: {}".format(repr(str(O[j])) if type(O[j]) in [str, unicode] else repr(O[j])))
 						break
 
@@ -619,7 +788,7 @@ class CipherMessageEditorTab(IMessageEditorTab):
 				for k,v in SpecialCharacters.items():
 					newContent = newContent.replace(v,k)
 
-				newContent = ExtenderHelpers.stringToBytes(newContent)
+				newContent = self._extender._helpers.stringToBytes(newContent)
 				return newContent
 
 

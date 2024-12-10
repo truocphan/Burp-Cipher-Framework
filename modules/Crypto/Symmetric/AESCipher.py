@@ -28,11 +28,11 @@ class AESCipher:
 			instance = Cipher.getInstance(self.algorithm)
 
 		if self.mode == "ECB":
-			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"))
+			instance.init(Cipher.ENCRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"))
 		elif self.mode == "GCM":
-			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
+			instance.init(Cipher.ENCRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
 		else:
-			instance.init(1, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
+			instance.init(Cipher.ENCRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
 
 		CipherText = instance.doFinal(PlainText)
 		return CipherText.tostring()
@@ -52,11 +52,11 @@ class AESCipher:
 			instance = Cipher.getInstance(self.algorithm)
 
 		if self.mode == "ECB":
-			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"))
+			instance.init(Cipher.DECRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"))
 		elif self.mode == "GCM":
-			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
+			instance.init(Cipher.DECRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"), GCMParameterSpec(GCM_Tag, IV))
 		else:
-			instance.init(2, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
+			instance.init(Cipher.DECRYPT_MODE, SecretKeySpec(SECRET_KEY, "AES"), IvParameterSpec(IV))
 
 		PlainText = instance.doFinal(CipherText)
 		return  PlainText.tostring()

@@ -281,6 +281,9 @@ RSACipher('RSA/ECB/PKCS1Padding').encrypt('TPCyberSec', PublicKey=PublicKey)
 
 RSACipher('RSA/ECB/PKCS1Padding').encrypt('TPCyberSec', PrivateKey=PrivateKey)
 # OUTPUT: '@|Y"\x8eaF{\x0c\x9ehY%\xa9X\x10d{\x01\xae\xc8\x1d;I\xfc>\x19\xb1\x16\x88V\x06\'S\x01\xc3\x18S/\\\xa0\x0f\xbd\xaf\xfe\xf7\x1a\xaa\x927J2\xb2\xc7L\x1f\xc2\xf2@\xb1\xa0\x11?\xf6#\xfb\x17\xb1@~\x07{\x85\xc9\xee\xe2b\xf7}\xb7Ub\x07/S#\x8f\'\x01qI$\x91\x97\x9bp\x8a\xa1\xaf\xfc\xc5\xe7\xb3\xd8\xec\x1b\xed*\x9b\xe5\xb8\x07\x14gf\xef\x1a\xe0\x9b\x9ft\x81\x19\xff\xc4&\xb7\xa3A\xd27\xbd\x95>>\xfe\xda\x80u\xb8\xb0\xb9\x84\xfe\xd0\xc2\x06N\x8e\x0c\xb0k\x13\x91\xb9\x8c\xcb\xde{\x0b\xbd\x85A\xado\xd8\xd4\x18i+\x05I\x07\xa0\xa6\x04]\x14>\x15I\xf24h\xd2kB\xcd\xbck\xf8\xf8lZ\xed\xc3=\x95\xb4\x8a\x96\xf9\xb5\xad>&\xff\xc2\x88\xf6\x156\x96\x80~\xf6\x1e\x9a\x13\x9f\x1c\x0fn\xdc.\xa2rJ\x88\xb5\xf31(\x82\xa2\xbc\x14\xa5\xed\x13\x03\xe8\xd9\xda\xc0\x15\x1e\x90\xe4~\xd6\xee\xfb\xc2\x1a\x8c'
+
+RSACipher('RSA/ECB/NoPadding').encrypt('TPCyberSec', PublicKey=PublicKey)
+RSACipher('RSA/ECB/OAEPPadding').encrypt('TPCyberSec', PublicKey=PublicKey, OAEPHashAlg="SHA-256", MGFHashAlg="SHA-256")
 ```
 
 #### `RSACipher(algorithm :str, provider :str=None).decrypt(CipherText :str, PrivateKey :str=None, PublicKey :str=None)` -> str
@@ -469,5 +472,18 @@ SHA512().digest('TPCyberSec')
 SHA512().hexdigest('TPCyberSec')
 # OUTPUT: 'be75653d3f49e79c443447c2f37d5a5f4d116bb365b32d9bea1dc3d367e5353026e1b7d042eb0587844e6c5d092060052a3048a70db1d5f7fa11892a2cf43259'
 ```
+
+---
+# Contributors
+<style>
+	@keyframes blinkBorder {
+		0% { border-color: transparent; }
+		50% { border-color: red; }
+		100% { border-color: transparent; }
+	}
+</style>
+<p align="left">
+	<a href="https://github.com/toannguyen3107"><img src="https://avatars.githubusercontent.com/u/99452100" width="50" height="50" alt="toannguyen3107" style="border: 3px solid transparent; border-radius: 50%; animation: blinkBorder 1s infinite; padding: 5px;"></a>
+</p>
 
 ---
